@@ -30,7 +30,15 @@ function createMemoryId(prefix: string) {
 
 function shouldUseMemoryFallback(error: any) {
   const message = String(error?.message || error || '').toLowerCase()
-  const shouldFallback = message.includes('fetch failed') || message.includes('network') || message.includes('timeout')
+  const code = String(error?.code || '').toLowerCase()
+  const shouldFallback =
+    message.includes('fetch failed') ||
+    message.includes('network') ||
+    message.includes('timeout') ||
+    message.includes('schema cache') ||
+    message.includes('could not find the table') ||
+    message.includes('relation') ||
+    code === 'pgrst205'
   if (shouldFallback) {
     fallbackInUse = true
   }
@@ -59,6 +67,7 @@ export async function checkSupabaseConnection() {
       lastSupabaseSuccessAt,
     }
   } catch (error: any) {
+    shouldUseMemoryFallback(error)
     return {
       connected: false,
       fallbackInUse,

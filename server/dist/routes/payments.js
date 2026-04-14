@@ -17,7 +17,8 @@ async function verifyAuth(req, res, next) {
     req.userId = payload.id;
     next();
 }
-router.use(verifyAuth);
+// Restrict auth enforcement to payment endpoints mounted under /api/payments/*.
+router.use('/payments', verifyAuth);
 // ===== STRIPE PAYMENT ENDPOINTS =====
 /**
  * Create Stripe checkout session

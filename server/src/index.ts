@@ -116,6 +116,21 @@ app.get('/api/characters', async (req: Request, res: Response) => {
   }
 })
 
+app.get('/api/characters/:id', async (req: Request, res: Response) => {
+  try {
+    const characterId = req.params.id
+    const character = await supabase.getCharacter(characterId)
+
+    if (!character) {
+      return res.status(404).json({ error: 'Character not found' })
+    }
+
+    res.json({ character })
+  } catch (error: any) {
+    res.status(500).json({ error: error.message })
+  }
+})
+
 app.get('/api/characters/classes', (req: Request, res: Response) => {
   const classes = Object.values(characterService.CHARACTER_CLASSES).map((c) => ({
     id: c.id,
@@ -201,6 +216,57 @@ app.post('/api/characters', async (req: Request, res: Response) => {
       },
       costs,
       newBalance: updatedAccount.cvt_balance,
+    })
+  } catch (error: any) {
+    res.status(500).json({ error: error.message })
+  }
+})
+
+app.post('/api/characters/:id/level-up', async (req: Request, res: Response) => {
+  try {
+    const characterId = req.params.id
+    const { walletAddress } = req.body
+
+    if (!walletAddress) {
+      return res.status(400).json({ error: 'walletAddress is required' })
+    }
+
+    const account = await supabase.getOrCreateAccount(walletAddress)
+    const character = await supabase.getCharacter(characterId)
+
+    if (!character) {
+      return res.status(404).json({ error: 'Character not found' })
+    }
+
+    if (character.owner_id !== account.id) {
+      return res.status(403).json({ error: 'You can only level up your own character' })
+    }
+
+    const levelUpCost = Math.max(100, character.level * 100)
+    if (account.cvt_balance < levelUpCost) {
+      return res.status(400).json({
+        error: 'Insufficient vault tokens',
+        required: levelUpCost,
+        available: account.cvt_balance,
+      })
+    }
+
+    await supabase.incrementAccountBalance(account.id, -levelUpCost)
+    const updatedCharacter = await supabase.updateCharacter(character.id, {
+      level: character.level + 1,
+      health: character.health + 8,
+      attack: character.attack + 3,
+      defense: character.defense + 2,
+      experience: (character.experience || 0) + 100,
+    })
+
+    const updatedAccount = await supabase.getAccount(account.id)
+
+    res.json({
+      message: 'Character leveled up successfully',
+      levelUpCost,
+      character: updatedCharacter,
+      cvtBalance: updatedAccount.cvt_balance,
     })
   } catch (error: any) {
     res.status(500).json({ error: error.message })

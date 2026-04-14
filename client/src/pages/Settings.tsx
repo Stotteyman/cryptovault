@@ -1,20 +1,26 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useWallet } from '../context/WalletContext'
+import { useAuth } from '../context/AuthContext'
 import { apiClient } from '../services/api'
 
 export default function Settings() {
-  const { account } = useWallet()
+  const { account: walletAccount } = useWallet()
+  const { account: authAccount, authProvider } = useAuth()
   const navigate = useNavigate()
   const [nickname, setNickname] = useState('')
   const [loading, setLoading] = useState(true)
   const [status, setStatus] = useState('')
+  const effectiveWallet = walletAccount || authAccount?.wallet_address || ''
 
   useEffect(() => {
     const loadAccount = async () => {
-      if (!account) return
+      if (!effectiveWallet) {
+        setLoading(false)
+        return
+      }
       try {
-        const response = await apiClient.getAccountInfo(account)
+        const response = await apiClient.getAccountInfo(effectiveWallet)
         setNickname(response.data.nickname || '')
       } catch (error) {
         console.error('Failed to load account info:', error)
@@ -24,16 +30,16 @@ export default function Settings() {
     }
 
     loadAccount()
-  }, [account])
+  }, [effectiveWallet])
 
   const handleSave = async () => {
-    if (!account) {
+    if (!effectiveWallet) {
       setStatus('Wallet not connected.')
       return
     }
     setStatus('Saving settings...')
     try {
-      await apiClient.updateAccountSettings({ walletAddress: account, nickname })
+      await apiClient.updateAccountSettings({ walletAddress: effectiveWallet, nickname })
       setStatus('Nickname updated successfully.')
     } catch (error) {
       console.error('Failed to save settings:', error)
@@ -61,9 +67,11 @@ export default function Settings() {
 
         <div className="grid gap-8 lg:grid-cols-[1fr_0.85fr]">
           <div className="rounded-3xl border border-slate-800 bg-slate-950 p-6">
-            <p className="text-sm uppercase tracking-[0.3em] text-slate-500">Wallet</p>
-            <p className="mt-4 text-sm text-slate-300">Connected address</p>
-            <p className="mt-2 break-all text-white">{account ?? 'Not connected'}</p>
+            <p className="text-sm uppercase tracking-[0.3em] text-slate-500">Connection</p>
+            <p className="mt-4 text-sm text-slate-300">Provider</p>
+            <p className="mt-2 text-white uppercase tracking-[0.15em]">{authProvider ?? 'unknown'}</p>
+            <p className="mt-4 text-sm text-slate-300">Connected wallet address</p>
+            <p className="mt-2 break-all text-white">{effectiveWallet || 'No wallet linked to this account yet.'}</p>
           </div>
 
           <div className="rounded-3xl border border-slate-800 bg-slate-950 p-6">

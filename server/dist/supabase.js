@@ -22,7 +22,14 @@ function createMemoryId(prefix) {
 }
 function shouldUseMemoryFallback(error) {
     const message = String(error?.message || error || '').toLowerCase();
-    const shouldFallback = message.includes('fetch failed') || message.includes('network') || message.includes('timeout');
+    const code = String(error?.code || '').toLowerCase();
+    const shouldFallback = message.includes('fetch failed') ||
+        message.includes('network') ||
+        message.includes('timeout') ||
+        message.includes('schema cache') ||
+        message.includes('could not find the table') ||
+        message.includes('relation') ||
+        code === 'pgrst205';
     if (shouldFallback) {
         fallbackInUse = true;
     }
@@ -48,6 +55,7 @@ export async function checkSupabaseConnection() {
         };
     }
     catch (error) {
+        shouldUseMemoryFallback(error);
         return {
             connected: false,
             fallbackInUse,

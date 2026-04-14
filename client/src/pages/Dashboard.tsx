@@ -11,7 +11,7 @@ interface DashboardStats {
 }
 
 export default function Dashboard() {
-  const { account, balance, disconnectWallet } = useWallet()
+  const { account, disconnectWallet } = useWallet()
   const { account: authAccount, balance: authBalance, logout } = useAuth()
   const navigate = useNavigate()
   const [stats, setStats] = useState<DashboardStats>({ characters: 0, dungeons: 0, cvt: 0 })
@@ -54,8 +54,6 @@ export default function Dashboard() {
     loadStats()
   }, [effectiveWallet, authBalance])
 
-  const formatAddress = (addr: string) => `${addr.slice(0, 6)}...${addr.slice(-4)}`
-
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100">
       <div className="max-w-6xl mx-auto px-6 py-10">
@@ -83,12 +81,6 @@ export default function Dashboard() {
 
         <div className="mt-8 grid gap-6 lg:grid-cols-3">
           <div className="rounded-3xl border border-slate-800 bg-slate-900 p-6 shadow-lg">
-            <p className="text-sm uppercase tracking-[0.3em] text-slate-500">Wallet Address</p>
-            <p className="mt-4 text-lg font-semibold text-white">{effectiveWallet ? formatAddress(effectiveWallet) : 'Not connected'}</p>
-            <p className="text-sm text-slate-400 mt-2">Balance: {balance ?? '0'} ETH</p>
-          </div>
-
-          <div className="rounded-3xl border border-slate-800 bg-slate-900 p-6 shadow-lg">
             <p className="text-sm uppercase tracking-[0.3em] text-slate-500">Progress</p>
             {loading ? (
               <p className="mt-4 text-slate-400">Loading progress...</p>
@@ -110,6 +102,12 @@ export default function Dashboard() {
                 <p className="text-sm text-slate-400 mt-2">Spend on gear, entry fees, and premium systems.</p>
               </>
             )}
+          </div>
+
+          <div className="rounded-3xl border border-slate-800 bg-slate-900 p-6 shadow-lg">
+            <p className="text-sm uppercase tracking-[0.3em] text-slate-500">Wallet Status</p>
+            <p className="mt-4 text-xl font-semibold text-white">{effectiveWallet ? 'Connected' : 'Not connected'}</p>
+            <p className="text-sm text-slate-400 mt-2">View full connection details in Account Settings.</p>
           </div>
         </div>
 
@@ -139,6 +137,24 @@ export default function Dashboard() {
             <p className="text-5xl">🛒</p>
             <h2 className="mt-4 text-2xl font-semibold text-white">Item Shop</h2>
             <p className="mt-3 text-slate-400">Browse item categories, compare prices, and purchase gear.</p>
+          </div>
+
+          <div
+            onClick={() => navigate('/inventory')}
+            className="rounded-3xl border border-slate-800 bg-slate-950/80 p-8 transition hover:border-emerald-300/50 hover:bg-slate-900 cursor-pointer"
+          >
+            <p className="text-5xl">🎒</p>
+            <h2 className="mt-4 text-2xl font-semibold text-white">Inventory Menu</h2>
+            <p className="mt-3 text-slate-400">Review your collected gear, consumables, and loadout by category.</p>
+          </div>
+
+          <div
+            onClick={() => navigate('/characters')}
+            className="rounded-3xl border border-slate-800 bg-slate-950/80 p-8 transition hover:border-teal-300/50 hover:bg-slate-900 cursor-pointer"
+          >
+            <p className="text-5xl">🧬</p>
+            <h2 className="mt-4 text-2xl font-semibold text-white">Character Menu</h2>
+            <p className="mt-3 text-slate-400">Manage your roster, inspect stats, and level up your characters.</p>
           </div>
 
           <div

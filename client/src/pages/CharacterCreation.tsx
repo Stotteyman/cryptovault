@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useWallet } from '../context/WalletContext'
+import { useAuth } from '../context/AuthContext'
 import { apiClient } from '../services/api'
 
 interface ClassOption {
@@ -24,6 +25,8 @@ interface CostBreakdown {
 export default function CharacterCreation() {
   const navigate = useNavigate()
   const { account } = useWallet()
+  const { account: authAccount } = useAuth()
+  const effectiveWallet = account || authAccount?.wallet_address || ''
   const [classes, setClasses] = useState<ClassOption[]>([])
   const [selectedClass, setSelectedClass] = useState<string>('')
   const [name, setName] = useState('')
@@ -78,7 +81,7 @@ export default function CharacterCreation() {
       return
     }
 
-    if (!account) {
+    if (!effectiveWallet) {
       setStatus('Wallet not connected. Please connect your wallet.')
       return
     }
@@ -86,7 +89,7 @@ export default function CharacterCreation() {
     setStatus('Creating character...')
     try {
       await apiClient.createCharacter({
-        walletAddress: account,
+        walletAddress: effectiveWallet,
         name: name.trim(),
         classId: selectedClass,
         color: color ? '#00d9ff' : undefined,

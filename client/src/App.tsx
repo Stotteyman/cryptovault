@@ -11,6 +11,7 @@ const Dashboard = lazy(() => import('./pages/Dashboard'))
 const Dungeons = lazy(() => import('./pages/Dungeons'))
 const Arena = lazy(() => import('./pages/Arena'))
 const Inventory = lazy(() => import('./pages/Inventory'))
+const Characters = lazy(() => import('./pages/Characters'))
 const Marketplace = lazy(() => import('./pages/Marketplace'))
 const Shop = lazy(() => import('./pages/Shop'))
 const Settings = lazy(() => import('./pages/Settings'))
@@ -101,6 +102,14 @@ function AppContent() {
           element={
             <ProtectedRoute>
               <Inventory />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/characters"
+          element={
+            <ProtectedRoute>
+              <Characters />
             </ProtectedRoute>
           }
         />

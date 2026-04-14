@@ -1,18 +1,21 @@
 import { useState } from 'react'
 import { apiClient } from '../services/api'
 import { useWallet } from '../context/WalletContext'
+import { useAuth } from '../context/AuthContext'
 import { useNavigate } from 'react-router-dom'
 
 export default function PrizeWheel() {
   const navigate = useNavigate()
   const { account } = useWallet()
+  const { account: authAccount } = useAuth()
+  const effectiveWallet = account || authAccount?.wallet_address || ''
   const [wager, setWager] = useState(20)
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('Spin the wheel to win tokens, gear, or bonus rewards.')
   const [rewardDetail, setRewardDetail] = useState<string | null>(null)
 
   const handleSpin = async () => {
-    if (!account) {
+    if (!effectiveWallet) {
       setMessage('Connect your wallet before spinning the prize wheel.')
       return
     }
@@ -24,7 +27,7 @@ export default function PrizeWheel() {
     setLoading(true)
     setMessage('Spinning the prize wheel...')
     try {
-      const response = await apiClient.spinPrizeWheel({ wager, walletAddress: account })
+      const response = await apiClient.spinPrizeWheel({ wager, walletAddress: effectiveWallet })
       setMessage(response.data.message)
       setRewardDetail(response.data.reward || null)
     } catch (error) {

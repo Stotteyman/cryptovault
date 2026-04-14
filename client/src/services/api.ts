@@ -38,6 +38,8 @@ export const apiClient = {
     effect?: string
   }) => api.post('/api/characters', data),
   getCharacter: (id: string) => api.get(`/api/characters/${id}`),
+  levelUpCharacter: (id: string, walletAddress: string) =>
+    api.post(`/api/characters/${id}/level-up`, { walletAddress }),
   estimateCharacterCost: (data: {
     classId: string
     nameLength: number
