@@ -10,7 +10,7 @@ export default function Inventory() {
 
         <div className="rounded-3xl border border-slate-800 bg-slate-900 p-8 text-slate-300">
           <p className="text-lg font-semibold text-white">Inventory is coming online.</p>
-          <p className="mt-4 text-slate-400">This space will show your equipped items, durability, and repair options for VaultCrawler.</p>
+          <p className="mt-4 text-slate-400">This space will show your equipped items, durability, and repair options for Vault Crawler.</p>
         </div>
       </div>
     </div>

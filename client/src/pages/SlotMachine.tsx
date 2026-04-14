@@ -1,15 +1,21 @@
 import { useState } from 'react'
 import { apiClient } from '../services/api'
+import { useWallet } from '../context/WalletContext'
 import { useNavigate } from 'react-router-dom'
 
 export default function SlotMachine() {
   const navigate = useNavigate()
+  const { account } = useWallet()
   const [wager, setWager] = useState(10)
   const [message, setMessage] = useState('Place a wager and spin the vault slots.')
   const [result, setResult] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
   const handleSpin = async () => {
+    if (!account) {
+      setMessage('Connect your wallet before spinning the slot machine.')
+      return
+    }
     if (wager <= 0) {
       setMessage('Enter a wager greater than zero.')
       return
@@ -18,7 +24,7 @@ export default function SlotMachine() {
     setLoading(true)
     setMessage('Spinning...')
     try {
-      const response = await apiClient.spinSlotMachine({ wager })
+      const response = await apiClient.spinSlotMachine({ wager, walletAddress: account })
       const data = response.data
       setResult(data.result)
       setMessage(data.message)

@@ -18,7 +18,15 @@ api.interceptors.request.use((config) => {
 })
 
 export const apiClient = {
-  // Characters
+  // ===== AUTHENTICATION =====
+  loginGoogle: (profile: any) => api.post('/api/auth/google', { profile }),
+  loginApple: (profile: any) => api.post('/api/auth/apple', { profile }),
+  loginDiscord: (profile: any) => api.post('/api/auth/discord', { profile }),
+  loginSteam: (steamId: string) => api.post('/api/auth/steam', { steamId }),
+  loginWallet: (walletAddress: string) => api.post('/api/auth/wallet', { walletAddress }),
+  verifyToken: (token: string) => api.post('/api/auth/verify', {}, { headers: { Authorization: `Bearer ${token}` } }),
+
+  // ===== CHARACTERS =====
   getCharacters: (walletAddress?: string) =>
     api.get('/api/characters', { params: walletAddress ? { walletAddress } : {} }),
   getCharacterClasses: () => api.get('/api/characters/classes'),
@@ -37,26 +45,26 @@ export const apiClient = {
     includeEffect: boolean
   }) => api.post('/api/characters/cost-estimate', data),
 
-  // Dungeons
+  // ===== DUNGEONS =====
   getDungeons: () => api.get('/api/dungeons'),
   enterDungeon: (dungeonId: string, characterId: string) =>
     api.post(`/api/dungeons/${dungeonId}/enter`, { characterId }),
 
-  // Combat
+  // ===== COMBAT =====
   executeTurn: (data: { action: string; characterId: string; encounterId: string }) =>
     api.post('/api/combat/turn', data),
 
-  // Arena
+  // ===== ARENA =====
   getArenaRankings: () => api.get('/api/arena/rankings'),
   queueBattle: (data: { characterId: string; mode: string }) =>
     api.post('/api/arena/queue', data),
 
-  // Shop
+  // ===== SHOP & ITEMS =====
   getShopItems: () => api.get('/api/shop/items'),
   purchaseShopItem: (data: { itemId: number }) => api.post('/api/shop/purchase', data),
-  purchaseVaultTokens: (data: { usdAmount: number }) => api.post('/api/vault-token/purchase', data),
+  purchaseVaultTokens: (data: { usdAmount: number }) => api.post('/api/payments/vt/purchase', data),
 
-  // Marketplace
+  // ===== MARKETPLACE =====
   getMarketplaceItems: (filters?: Record<string, any>) => api.get('/api/marketplace', { params: filters }),
   listItem: (data: { itemId: string; price: number }) => api.post('/api/marketplace/list', data),
   buyItem: (itemId: string) => api.post(`/api/marketplace/${itemId}/buy`),
@@ -66,7 +74,7 @@ export const apiClient = {
   buyCharacter: (characterId: string, data: { buyerWallet: string; newOwnerId: string }) =>
     api.post(`/api/marketplace/characters/${characterId}/buy`, data),
 
-  // Account
+  // ===== ACCOUNT =====
   getAccountInfo: (walletAddress?: string) =>
     api.get('/api/account', { params: walletAddress ? { walletAddress } : {} }),
   updateAccountSettings: (data: { walletAddress: string; nickname: string }) =>
@@ -76,10 +84,30 @@ export const apiClient = {
   withdrawCVT: (data: { amount: number; wallet: string }) =>
     api.post('/api/account/withdraw', data),
 
-  // Mini-games
-  spinSlotMachine: (data: { wager: number }) => api.post('/api/slots/spin', data),
-  spinPrizeWheel: (data: { wager: number }) => api.post('/api/wheel/spin', data),
+  // ===== MINI-GAMES =====
+  spinSlotMachine: (data: { wager: number; walletAddress: string }) =>
+    api.post('/api/slots/spin', data),
+  spinPrizeWheel: (data: { wager: number; walletAddress: string }) =>
+    api.post('/api/wheel/spin', data),
 
-  // Health check
+  // ===== PAYMENTS - STRIPE =====
+  createStripeCheckout: (data: { tier: string; returnUrl: string }) =>
+    api.post('/api/payments/stripe/checkout', data),
+  verifyStripeCheckout: (sessionId: string) =>
+    api.post('/api/payments/stripe/verify', { sessionId }),
+  getVTPricingTiers: () => api.get('/api/payments/tiers'),
+
+  // ===== PAYMENTS - APPLE =====
+  verifyAppleIAP: (data: { receipt: string; productId: string }) =>
+    api.post('/api/payments/apple/verify', data),
+
+  // ===== PAYMENTS - GOOGLE =====
+  verifyGoogleIAP: (data: { packageName: string; productId: string; purchaseToken: string }) =>
+    api.post('/api/payments/google/verify', data),
+
+  // ===== PURCHASE HISTORY =====
+  getPurchaseHistory: () => api.get('/api/payments/history'),
+
+  // ===== HEALTH CHECK =====
   healthCheck: () => api.get('/health'),
 }

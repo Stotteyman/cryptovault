@@ -71,7 +71,7 @@ export default function Arena() {
 
           <div className="rounded-3xl border border-slate-800 bg-slate-900 p-6">
             <h2 className="text-xl font-semibold text-white">Quick Queue</h2>
-            <p className="mt-3 text-slate-400">Jump into a ranked 1v1 duel and earn CVT for victories.</p>
+            <p className="mt-3 text-slate-400">Jump into a ranked 1v1 duel and earn VT for victories.</p>
             <button
               type="button"
               onClick={joinQueue}

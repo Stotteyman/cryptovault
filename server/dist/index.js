@@ -3,14 +3,26 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import { CombatEngine, MatchmakingEngine, spinSlots, spinWheel } from './engine.js';
 import * as characterService from './character-service.js';
-import * as db from './db.js';
+import * as supabase from './supabase.js';
+import authRoutes from './routes/auth.js';
+import paymentRoutes from './routes/payments.js';
 dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5000;
 const combatEngine = new CombatEngine();
 const matchmakingEngine = new MatchmakingEngine();
+// CORS configuration
+app.use(cors({
+    origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
+    credentials: true,
+}));
+// Middleware
+app.use(express.json());
 // Initialize database at startup
-db.initializeDb();
+supabase.initializeDb();
+// Register route modules
+app.use('/api', authRoutes);
+app.use('/api', paymentRoutes);
 const dungeons = [
     { id: 1, name: 'Beginner Dungeon', difficulty: 1, reward: 3 },
     { id: 2, name: 'Novice Dungeon', difficulty: 2, reward: 6 },
@@ -22,9 +34,9 @@ const marketplaceItems = [
     { id: 3, name: 'Potion Pack', price: 4, rarity: 'Common' },
 ];
 const shopItems = [
-    { id: 101, name: 'Starter Gear Pack', price: 25, description: 'A set of reliable equipment for new VaultCrawlers.' },
-    { id: 102, name: 'Cosmetic Outfit', price: 15, description: 'A unique cosmetic set to stand out in the arena.' },
-    { id: 103, name: 'Repair Bundle', price: 10, description: 'Instant gear repair credits for your next run.' },
+    { id: 101, name: 'Starter Gear Pack', price: 25, category: 'Gear Packs', description: 'A set of reliable equipment for new Vault Crawlers.' },
+    { id: 102, name: 'Cosmetic Outfit', price: 15, category: 'Cosmetics', description: 'A unique cosmetic set to stand out in the arena.' },
+    { id: 103, name: 'Repair Bundle', price: 10, category: 'Utilities', description: 'Instant gear repair credits for your next run.' },
 ];
 const arenaRankings = [
     { rank: 1, name: 'ShadowHunter', elo: 1420 },
@@ -41,19 +53,30 @@ const accountInfo = {
 const accountBalance = { cvtBalance: 120.5 };
 app.use(cors());
 app.use(express.json());
+// Register route modules
+app.use('/api', authRoutes);
+app.use('/api', paymentRoutes);
 app.get('/health', (req, res) => {
     res.json({ status: 'Server is running', timestamp: new Date().toISOString() });
 });
-app.get('/api/characters', (req, res) => {
-    const { walletAddress } = req.query;
-    if (walletAddress) {
-        // Get characters for a specific wallet
-        const account = db.getOrCreateAccount(walletAddress);
-        const characters = db.getCharactersByOwner(account.id);
-        return res.json({ characters });
+app.get('/api/characters', async (req, res) => {
+    try {
+        const { walletAddress } = req.query;
+        if (walletAddress) {
+            // Get characters for a specific wallet
+            const account = await supabase.getAccountByWallet(walletAddress);
+            if (!account) {
+                return res.json({ characters: [] });
+            }
+            const characters = await supabase.getCharactersByOwner(account.id);
+            return res.json({ characters });
+        }
+        // If no wallet specified, return empty array (for backward compatibility)
+        res.json({ characters: [] });
     }
-    // If no wallet specified, return empty array (for backward compatibility)
-    res.json({ characters: [] });
+    catch (error) {
+        res.status(500).json({ error: error.message });
+    }
 });
 app.get('/api/characters/classes', (req, res) => {
     const classes = Object.values(characterService.CHARACTER_CLASSES).map((c) => ({
@@ -67,66 +90,72 @@ app.get('/api/characters/classes', (req, res) => {
     }));
     res.json({ classes });
 });
-app.post('/api/characters', (req, res) => {
-    const { walletAddress, name, classId, color, effect } = req.body;
-    // Validate input
-    if (!walletAddress || !name || !classId) {
-        return res.status(400).json({ error: 'walletAddress, name, and classId are required' });
-    }
-    // Validate character creation parameters
-    const validation = characterService.validateCharacterCreation({ name, classId, color, effect });
-    if (!validation.valid) {
-        return res.status(400).json({ error: validation.error });
-    }
-    // Get or create account
-    const account = db.getOrCreateAccount(walletAddress);
-    // Calculate costs
-    const charClass = characterService.CHARACTER_CLASSES[classId];
-    if (!charClass) {
-        return res.status(400).json({ error: 'Invalid character class' });
-    }
-    const costs = characterService.calculateTotalCharacterCost({
-        classId,
-        nameLength: name.trim().length,
-        includeColor: !!color,
-        includeEffect: !!effect,
-    });
-    // Check if account has sufficient balance
-    if (account.cvtBalance < costs.total) {
-        return res.status(400).json({
-            error: 'Insufficient vault tokens',
-            required: costs.total,
-            available: account.cvtBalance,
-            breakdown: costs,
+app.post('/api/characters', async (req, res) => {
+    try {
+        const { walletAddress, name, classId, color, effect } = req.body;
+        // Validate input
+        if (!walletAddress || !name || !classId) {
+            return res.status(400).json({ error: 'walletAddress, name, and classId are required' });
+        }
+        // Validate character creation parameters
+        const validation = characterService.validateCharacterCreation({ name, classId, color, effect });
+        if (!validation.valid) {
+            return res.status(400).json({ error: validation.error });
+        }
+        // Get or create account
+        const account = await supabase.getOrCreateAccount(walletAddress);
+        // Calculate costs
+        const charClass = characterService.CHARACTER_CLASSES[classId];
+        if (!charClass) {
+            return res.status(400).json({ error: 'Invalid character class' });
+        }
+        const costs = characterService.calculateTotalCharacterCost({
+            classId,
+            nameLength: name.trim().length,
+            includeColor: !!color,
+            includeEffect: !!effect,
+        });
+        // Check if account has sufficient balance
+        if (account.cvt_balance < costs.total) {
+            return res.status(400).json({
+                error: 'Insufficient vault tokens',
+                required: costs.total,
+                available: account.cvt_balance,
+                breakdown: costs,
+            });
+        }
+        // Deduct costs from account
+        await supabase.incrementAccountBalance(account.id, -costs.total);
+        // Create character
+        const newCharacter = {
+            name: name.trim(),
+            class: classId,
+            health: charClass.health,
+            attack: charClass.attack,
+            defense: charClass.defense,
+            nameColor: color || null,
+            nameEffect: effect || null,
+            nameCost: costs.nameCost,
+            colorCost: costs.colorCost,
+            effectCost: costs.effectCost,
+            classCost: costs.classCost,
+            ownerId: account.id,
+            level: 1,
+        };
+        const character = await supabase.createCharacter(newCharacter);
+        const updatedAccount = await supabase.getAccount(account.id);
+        res.status(201).json({
+            character: {
+                ...character,
+                className: charClass.name,
+            },
+            costs,
+            newBalance: updatedAccount.cvt_balance,
         });
     }
-    // Deduct costs from account
-    db.updateAccountBalance(account.id, -costs.total);
-    // Create character
-    const newCharacter = {
-        name: name.trim(),
-        class: classId,
-        health: charClass.health,
-        attack: charClass.attack,
-        defense: charClass.defense,
-        nameColor: color || null,
-        nameEffect: effect || null,
-        nameCost: costs.nameCost,
-        colorCost: costs.colorCost,
-        effectCost: costs.effectCost,
-        classCost: costs.classCost,
-        ownerId: account.id,
-        level: 1,
-    };
-    const character = db.createCharacter(newCharacter);
-    res.status(201).json({
-        character: {
-            ...character,
-            className: charClass.name,
-        },
-        costs,
-        newBalance: (account.cvtBalance - costs.total),
-    });
+    catch (error) {
+        res.status(500).json({ error: error.message });
+    }
 });
 app.get('/api/dungeons', (req, res) => {
     res.json({ dungeons });
@@ -194,19 +223,50 @@ app.post('/api/vault-token/purchase', (req, res) => {
     accountBalance.cvtBalance += vtAmount;
     res.json({ vtAmount, cvtBalance: accountBalance.cvtBalance });
 });
-app.get('/api/account', (req, res) => {
-    res.json({ ...accountInfo, cvtBalance: accountBalance.cvtBalance });
-});
-app.post('/api/account/settings', (req, res) => {
-    const { nickname } = req.body;
-    if (!nickname || typeof nickname !== 'string') {
-        return res.status(400).json({ error: 'Nickname is required' });
+app.get('/api/account', async (req, res) => {
+    try {
+        const { walletAddress } = req.query;
+        if (!walletAddress) {
+            return res.status(400).json({ error: 'Wallet address is required' });
+        }
+        const account = await supabase.getOrCreateAccount(walletAddress);
+        res.json({
+            id: account.id,
+            address: account.wallet_address,
+            nickname: account.nickname,
+            cvtBalance: account.cvt_balance,
+        });
     }
-    accountInfo.nickname = nickname;
-    res.json({ message: 'Account settings updated', nickname });
+    catch (error) {
+        res.status(500).json({ error: error.message });
+    }
 });
-app.get('/api/account/balance', (req, res) => {
-    res.json(accountBalance);
+app.post('/api/account/settings', async (req, res) => {
+    try {
+        const { walletAddress, nickname } = req.body;
+        if (!walletAddress || !nickname || typeof nickname !== 'string') {
+            return res.status(400).json({ error: 'Wallet address and nickname are required' });
+        }
+        const account = await supabase.getOrCreateAccount(walletAddress);
+        await supabase.updateAccountNickname(account.id, nickname);
+        res.json({ message: 'Account settings updated', nickname });
+    }
+    catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+app.get('/api/account/balance', async (req, res) => {
+    try {
+        const { walletAddress } = req.query;
+        if (!walletAddress) {
+            return res.status(400).json({ error: 'Wallet address is required' });
+        }
+        const account = await supabase.getOrCreateAccount(walletAddress);
+        res.json({ cvtBalance: account.cvt_balance });
+    }
+    catch (error) {
+        res.status(500).json({ error: error.message });
+    }
 });
 app.post('/api/account/withdraw', (req, res) => {
     const { amount, wallet } = req.body;
@@ -215,23 +275,59 @@ app.post('/api/account/withdraw', (req, res) => {
     }
     res.json({ message: `Withdrawal of ${amount} CVT to ${wallet} initiated.` });
 });
-app.post('/api/slots/spin', (req, res) => {
-    const { wager } = req.body;
-    if (typeof wager !== 'number' || wager <= 0) {
-        return res.status(400).json({ error: 'Wager must be a positive number' });
+app.post('/api/slots/spin', async (req, res) => {
+    try {
+        const { wager, walletAddress } = req.body;
+        if (typeof wager !== 'number' || wager <= 0) {
+            return res.status(400).json({ error: 'Wager must be a positive number' });
+        }
+        if (!walletAddress) {
+            return res.status(400).json({ error: 'Wallet address is required' });
+        }
+        const account = await supabase.getOrCreateAccount(walletAddress);
+        if (account.cvt_balance < wager) {
+            return res.status(400).json({
+                error: 'Insufficient vault tokens',
+                required: wager,
+                available: account.cvt_balance,
+            });
+        }
+        const outcome = spinSlots(wager);
+        const net = outcome.reward - wager;
+        await supabase.incrementAccountBalance(account.id, net);
+        const updatedAccount = await supabase.getAccount(account.id);
+        res.json({ ...outcome, newBalance: updatedAccount.cvt_balance });
     }
-    const outcome = spinSlots(wager);
-    accountBalance.cvtBalance += outcome.reward - wager;
-    res.json({ ...outcome, newBalance: accountBalance.cvtBalance });
+    catch (error) {
+        res.status(500).json({ error: error.message });
+    }
 });
-app.post('/api/wheel/spin', (req, res) => {
-    const { wager } = req.body;
-    if (typeof wager !== 'number' || wager <= 0) {
-        return res.status(400).json({ error: 'Wager must be a positive number' });
+app.post('/api/wheel/spin', async (req, res) => {
+    try {
+        const { wager, walletAddress } = req.body;
+        if (typeof wager !== 'number' || wager <= 0) {
+            return res.status(400).json({ error: 'Wager must be a positive number' });
+        }
+        if (!walletAddress) {
+            return res.status(400).json({ error: 'Wallet address is required' });
+        }
+        const account = await supabase.getOrCreateAccount(walletAddress);
+        if (account.cvt_balance < wager) {
+            return res.status(400).json({
+                error: 'Insufficient vault tokens',
+                required: wager,
+                available: account.cvt_balance,
+            });
+        }
+        const outcome = spinWheel(wager);
+        const net = outcome.reward - wager;
+        await supabase.incrementAccountBalance(account.id, net);
+        const updatedAccount = await supabase.getAccount(account.id);
+        res.json({ reward: outcome.reward, bonus: outcome.bonus, message: outcome.message, newBalance: updatedAccount.cvt_balance });
     }
-    const outcome = spinWheel(wager);
-    accountBalance.cvtBalance += outcome.reward - wager;
-    res.json({ reward: outcome.reward, bonus: outcome.bonus, message: outcome.message, newBalance: accountBalance.cvtBalance });
+    catch (error) {
+        res.status(500).json({ error: error.message });
+    }
 });
 // Character Customization Cost Estimation
 app.post('/api/characters/cost-estimate', (req, res) => {
@@ -250,13 +346,13 @@ app.post('/api/characters/cost-estimate', (req, res) => {
     }
 });
 // List Character for Trade
-app.post('/api/characters/:id/trade', (req, res) => {
-    const { characterId, walletAddress, price } = req.body;
-    if (!characterId || !walletAddress || typeof price !== 'number' || price <= 0) {
-        return res.status(400).json({ error: 'characterId, walletAddress, and price are required' });
-    }
+app.post('/api/characters/:id/trade', async (req, res) => {
     try {
-        const trade = db.listCharacterForTrade(characterId, price, walletAddress);
+        const { characterId, walletAddress, price } = req.body;
+        if (!characterId || !walletAddress || typeof price !== 'number' || price <= 0) {
+            return res.status(400).json({ error: 'characterId, walletAddress, and price are required' });
+        }
+        const trade = await supabase.listCharacterForTrade(characterId, price, walletAddress);
         res.status(201).json(trade);
     }
     catch (error) {
@@ -264,28 +360,24 @@ app.post('/api/characters/:id/trade', (req, res) => {
     }
 });
 // Get Trade Listings
-app.get('/api/marketplace/characters', (req, res) => {
+app.get('/api/marketplace/characters', async (req, res) => {
     try {
-        const listings = db.getTradeListings();
-        const enriched = listings.map((trade) => {
-            const character = db.getCharacter(trade.characterId);
-            return { ...trade, character };
-        });
-        res.json({ listings: enriched });
+        const listings = await supabase.getTradeListings();
+        res.json({ listings });
     }
     catch (error) {
         res.status(500).json({ error: error.message });
     }
 });
 // Buy Character
-app.post('/api/marketplace/characters/:id/buy', (req, res) => {
-    const characterId = req.params.id;
-    const { buyerWallet, newOwnerId } = req.body;
-    if (!buyerWallet || !newOwnerId) {
-        return res.status(400).json({ error: 'buyerWallet and newOwnerId are required' });
-    }
+app.post('/api/marketplace/characters/:id/buy', async (req, res) => {
     try {
-        const character = db.buyCharacter(characterId, buyerWallet, newOwnerId);
+        const characterId = req.params.id;
+        const { buyerWallet, newOwnerId } = req.body;
+        if (!buyerWallet || !newOwnerId) {
+            return res.status(400).json({ error: 'buyerWallet and newOwnerId are required' });
+        }
+        const character = await supabase.buyCharacter(characterId, buyerWallet, newOwnerId);
         res.json({ message: 'Character purchased successfully', character });
     }
     catch (error) {
@@ -297,7 +389,7 @@ app.use((err, req, res, next) => {
     res.status(500).json({ error: 'Internal server error' });
 });
 app.listen(PORT, () => {
-    console.log(`CryptoVault Server running on http://localhost:${PORT}`);
+    console.log(`Vault Crawler Server running on http://localhost:${PORT}`);
     console.log('Health check: http://localhost:' + PORT + '/health');
 });
 export default app;

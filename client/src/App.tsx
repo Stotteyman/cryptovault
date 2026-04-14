@@ -2,6 +2,8 @@ import type { ReactNode } from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { Suspense, lazy } from 'react'
 import './index.css'
+import { useAuth } from './context/AuthContext'
+import { AuthProvider } from './context/AuthContext'
 import { WalletProvider, useWallet } from './context/WalletContext'
 
 const Login = lazy(() => import('./pages/Login'))
@@ -15,16 +17,36 @@ const Settings = lazy(() => import('./pages/Settings'))
 const CharacterCreation = lazy(() => import('./pages/CharacterCreation'))
 const SlotMachine = lazy(() => import('./pages/SlotMachine'))
 const PrizeWheel = lazy(() => import('./pages/PrizeWheel'))
+const AddVT = lazy(() => import('./pages/AddVT'))
+const TermsOfService = lazy(() => import('./pages/TermsOfService'))
+const Disclaimer = lazy(() => import('./pages/Disclaimer'))
 
 const ProtectedRoute = ({ children }: { children: ReactNode }) => {
-  const { isConnected } = useWallet()
-  return isConnected ? <>{children}</> : <Navigate to="/" replace />
+  const { isConnected: walletConnected } = useWallet()
+  const { isConnected: authConnected, initializing } = useAuth()
+
+  if (initializing) {
+    return <LoadingFallback />
+  }
+
+  return walletConnected || authConnected ? <>{children}</> : <Navigate to="/" replace />
+}
+
+const PublicRoute = ({ children }: { children: ReactNode }) => {
+  const { isConnected: walletConnected } = useWallet()
+  const { isConnected: authConnected, initializing } = useAuth()
+
+  if (initializing) {
+    return <LoadingFallback />
+  }
+
+  return walletConnected || authConnected ? <Navigate to="/dashboard" replace /> : <>{children}</>
 }
 
 const LoadingFallback = () => (
   <div className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center">
     <div className="animate-pulse rounded-3xl border border-slate-800 bg-slate-900/90 px-10 py-8 text-center shadow-xl">
-      <p className="text-lg font-semibold">Loading VaultCrawler...</p>
+      <p className="text-lg font-semibold">Loading Vault Crawler...</p>
       <p className="mt-2 text-sm text-slate-400">Preparing your game experience.</p>
     </div>
   </div>
@@ -34,7 +56,14 @@ function AppContent() {
   return (
     <Suspense fallback={<LoadingFallback />}>
       <Routes>
-        <Route path="/" element={<Login />} />
+        <Route
+          path="/"
+          element={
+            <PublicRoute>
+              <Login />
+            </PublicRoute>
+          }
+        />
         <Route
           path="/dashboard"
           element={
@@ -84,6 +113,14 @@ function AppContent() {
           }
         />
         <Route
+          path="/add-vt"
+          element={
+            <ProtectedRoute>
+              <AddVT />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/shop"
           element={
             <ProtectedRoute>
@@ -91,6 +128,8 @@ function AppContent() {
             </ProtectedRoute>
           }
         />
+        <Route path="/terms" element={<TermsOfService />} />
+        <Route path="/disclaimer" element={<Disclaimer />} />
         <Route
           path="/settings"
           element={
@@ -124,7 +163,9 @@ function App() {
   return (
     <Router>
       <WalletProvider>
-        <AppContent />
+        <AuthProvider>
+          <AppContent />
+        </AuthProvider>
       </WalletProvider>
     </Router>
   )

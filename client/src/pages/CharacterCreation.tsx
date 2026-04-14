@@ -106,7 +106,7 @@ export default function CharacterCreation() {
       <div className="max-w-5xl mx-auto rounded-[2rem] border border-slate-800 bg-slate-900/95 p-8 shadow-2xl">
         <div className="mb-8">
           <p className="text-sm uppercase tracking-[0.35em] text-amber-300/70">Character Creation</p>
-          <h1 className="mt-3 text-4xl font-semibold">Create your first VaultCrawler</h1>
+            <h1 className="mt-3 text-4xl font-semibold">Create your first Vault Crawler</h1>
           <p className="mt-2 text-slate-400">Pick a class, customize your name, and start your dungeon journey.</p>
         </div>
 

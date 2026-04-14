@@ -6,6 +6,7 @@ interface WalletContextType {
   balance: string | null
   isConnected: boolean
   connectWallet: () => Promise<void>
+  syncWalletAddress: (walletAddress: string) => Promise<void>
   disconnectWallet: () => void
   provider: ethers.BrowserProvider | null
 }
@@ -84,6 +85,10 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     await connectWalletInternal()
   }
 
+  const syncWalletAddress = async (walletAddress: string) => {
+    await connectWalletInternal(walletAddress, false)
+  }
+
   const disconnectWallet = () => {
     setAccount(null)
     setBalance(null)
@@ -117,6 +122,7 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         balance,
         isConnected,
         connectWallet,
+        syncWalletAddress,
         disconnectWallet,
         provider,
       }}

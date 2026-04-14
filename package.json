@@ -14,5 +14,9 @@
     "start": "npm start --workspace=server",
     "test": "npm test --workspace=client && npm test --workspace=server",
     "lint": "npm run lint --workspace=client && npm run lint --workspace=server"
+  },
+  "dependencies": {
+    "@supabase/ssr": "^0.10.2",
+    "@supabase/supabase-js": "^2.103.0"
   }
 }

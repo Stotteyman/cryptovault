@@ -72,7 +72,7 @@ export default function Settings() {
               value={nickname}
               onChange={(e) => setNickname(e.target.value)}
               className="mt-3 w-full rounded-2xl border border-slate-800 bg-slate-900 px-4 py-3 text-white outline-none focus:border-cyan-400"
-              placeholder="Enter your VaultCrawler name"
+              placeholder="Enter your Vault Crawler name"
             />
             <button
               type="button"

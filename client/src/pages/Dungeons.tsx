@@ -70,7 +70,7 @@ export default function Dungeons() {
                   <span>{dungeon.name}</span>
                   <span>Tier {dungeon.difficulty}</span>
                 </div>
-                <p className="mt-6 text-2xl font-semibold text-white">{dungeon.reward} CVT</p>
+                <p className="mt-6 text-2xl font-semibold text-white">{dungeon.reward} VT</p>
                 <p className="mt-3 text-slate-400 text-sm">A quick, optimized run with fast combat and solid loot.</p>
                 <button
                   type="button"

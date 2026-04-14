@@ -61,7 +61,7 @@ export default function Marketplace() {
               <div key={item.id} className="rounded-3xl border border-slate-800 bg-slate-900 p-6">
                 <div className="flex items-center justify-between text-slate-400 text-sm uppercase tracking-[0.3em]">
                   <span>{item.rarity}</span>
-                  <span>{item.price} CVT</span>
+                  <span>{item.price} VT</span>
                 </div>
                 <h2 className="mt-4 text-xl font-semibold text-white">{item.name}</h2>
                 <button
