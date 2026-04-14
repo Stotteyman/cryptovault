@@ -31,20 +31,46 @@ router.use('/payments', verifyAuth)
  */
 router.post('/payments/stripe/checkout', async (req: Request, res: Response) => {
   try {
-    const { tier, returnUrl } = req.body
+    const { usdAmount, returnUrl } = req.body
     const accountId = (req as any).userId
 
-    if (!tier || !Object.keys(paymentService.VT_PRICING).includes(tier)) {
-      return res.status(400).json({ error: 'Invalid tier' })
+    if (typeof usdAmount !== 'number' || usdAmount <= 0) {
+      return res.status(400).json({ error: 'Invalid USD amount' })
     }
 
     const url = await paymentService.createCheckoutSession({
       accountId,
-      tier,
+      usdAmount,
       returnUrl: returnUrl || 'http://localhost:3000/shop',
     })
 
-    res.json({ url })
+    res.json({ url, vtAmount: paymentService.usdToVt(usdAmount) })
+  } catch (error: any) {
+    res.status(500).json({ error: error.message })
+  }
+})
+
+router.post('/payments/crypto/checkout', async (req: Request, res: Response) => {
+  try {
+    const { usdAmount, currency, network } = req.body
+    const accountId = (req as any).userId
+
+    if (typeof usdAmount !== 'number' || usdAmount <= 0) {
+      return res.status(400).json({ error: 'Invalid USD amount' })
+    }
+
+    if (!currency || !network) {
+      return res.status(400).json({ error: 'Currency and network are required' })
+    }
+
+    const transaction = await paymentService.createCryptoCheckout({
+      accountId,
+      usdAmount,
+      currency,
+      network,
+    })
+
+    res.json(transaction)
   } catch (error: any) {
     res.status(500).json({ error: error.message })
   }
@@ -116,6 +142,8 @@ router.get('/payments/tiers', async (req: Request, res: Response) => {
     res.json({
       tiers: paymentService.VT_PRICING,
       iapTiers: paymentService.IAP_PRICING,
+      vtPerUsd: paymentService.VT_PER_USD,
+      cryptoOptions: paymentService.getCryptoPaymentOptions(),
     })
   } catch (error: any) {
     res.status(500).json({ error: error.message })
