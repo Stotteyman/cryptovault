@@ -1,0 +1,66 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Account {
+  id        String   @id @default(cuid())
+  address   String   @unique
+  nickname  String   @default("Vault Traveler")
+  cvtBalance Float  @default(100.0)
+  characters Character[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Character {
+  id          String   @id @default(cuid())
+  name        String
+  class       String   // "Noob", "Knight", "Rogue", "Mage", "Ranger"
+  level       Int      @default(1)
+  health      Int
+  attack      Int
+  defense     Int
+  
+  // Customization
+  nameColor   String?  // hex color for name
+  nameEffect  String?  // effect type: "glow", "shimmer", "fire", etc.
+  
+  // Pricing metadata
+  nameCost    Int      @default(0)  // VT spent on name customization
+  colorCost   Int      @default(0)  // VT spent on color
+  effectCost  Int      @default(0)  // VT spent on effect
+  classCost   Int      @default(0)  // VT spent on class purchase
+  
+  // Trading/Ownership
+  owner       Account  @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  ownerId     String
+  isTrading   Boolean  @default(false)
+  tradePrice  Float?
+  tradeOfferedBy String? // wallet address of who offered to trade
+  
+  // Gameplay
+  experience  Int      @default(0)
+  wins        Int      @default(0)
+  losses      Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Trade {
+  id          String   @id @default(cuid())
+  characterId String
+  fromWallet  String
+  toWallet    String?  // null if listing, set when accepted
+  price       Float
+  status      String   @default("listing") // "listing", "accepted", "completed", "cancelled"
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}

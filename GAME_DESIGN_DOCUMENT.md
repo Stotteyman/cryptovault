@@ -1,263 +1,336 @@
-# CryptoVault: Game Design Document
+# VaultCrawler: Game Design Document
 
-## 1. Game Overview
+## 1. Core Objective
 
-### 1.1 Title & Concept
-**Game Name:** CryptoVault  
-**Tagline:** "Risk. Loot. Survive. Repeat."  
-**Genre:** Minimalist Play-to-Earn (P2E) Dungeon Crawler with PvP Arena Combat  
-**Platform:** Web-based (React/Vue frontend, Node.js backend)  
-**Visual Style:** Minimalist (pixel art, simple animations, embedded videos for storytelling)
+Build a scalable, monetizable, skill-based dungeon crawler with PvP that prioritizes:
+- Fast gameplay loops (30–90 seconds per encounter)
+- Long-term retention
+- Fair progression with no hard pay-to-win
+- Expandable systems designed for future growth
 
-### 1.2 Core Hook
-Players deposit real cryptocurrency into their account, purchase gear and characters, then risk them in permadeath dungeons and PvP arenas to earn real crypto rewards through combat, looting, and monster slaying.
+The system must keep players returning daily, encourage optional spending, and evolve continuously without breaking balance.
 
 ---
 
-## 2. Tokenomics
+## 2. Design Philosophy
 
-### 2.1 Token Design
-**Token Name:** CVT (CryptoVault Token)  
-**Token Type:** ERC-20 (Ethereum) + cross-chain bridges (Polygon, Arbitrum for low fees)  
-**Total Supply:** 1,000,000,000 CVT
-
-| Allocation | % | Amount | Vesting |
-|-----------|---|--------|---------|
-| Play-to-Earn Rewards | 50% | 500,000,000 | Released over 5 years |
-| Founding Team | 15% | 150,000,000 | 2-year cliff, 3-year vest |
-| Early Investors | 15% | 150,000,000 | 1-year cliff, 2-year vest |
-| Treasury (Operations) | 10% | 100,000,000 | Governance-locked |
-| Ecosystem Partnerships | 10% | 100,000,000 | Milestone-based |
-
-### 2.2 Revenue Model
-- **Deposit Processing:** 1-2% fee on crypto deposits (USDC, ETH, CVT accepted)
-- **Gas Reimbursement:** Withdraw-to-wallet transactions charged market gas + 2% platform fee
-- **Premium Features:** Character name changes ($5-20), cosmetic skins (5-50 CVT)
-- **Battle Passes:** Monthly passes (10 CVT/month) for bonus XP/loot multipliers
-- **Marketplace Commission:** 5% tax on player-to-player gear/character sales
-- **Staking:** Players can stake CVT for governance & rewards (8-12% APY)
-
-### 2.3 In-Game Currency
-- **CVT:** Primary currency (earned via combat, looting, quests; tradeable on exchanges)
-- **USDC/ETH:** Fiat on-ramp for character/gear purchases
-- **Crests (Non-tradeable):** Earned through dungeons, used for cosmetics & battle pass
+Every system follows these rules:
+1. Clarity Over Complexity
+   - Easy to understand, hard to master
+2. Speed Over Realism
+   - No long animations or downtime
+3. Risk vs Reward
+   - Every choice should feel meaningful
+4. Skill > Money
+   - Purchases provide convenience, not dominance
+5. Everything is Tunable
+   - All numbers adjustable without code rewrites
 
 ---
 
-## 3. Game Mechanics
+## 3. Core Game Loop
 
-### 3.1 Character System
+1. Player logs in with wallet or account
+2. Selects character
+3. Enters dungeon or PvP arena
+4. Engages in combat (4–8 turns)
+5. Gains loot + currency
+6. Upgrades gear / skills
+7. Repeats
 
-#### Character Creation
-- Players create a character (limited to 5 per account initially)
-- **Base Stats:**
-  - Health: 50-100 (affected by class)
-  - Damage: 5-15 (affects loot quality)
-  - Defense: 0-10 (reduces incoming damage)
-  - Stamina: 10-20 (regulates actions per turn)
-
-#### Character Classes
-| Class | Health | Damage | Defense | Loot% | Cost |
-|-------|--------|--------|---------|-------|------|
-| Knight | 120 | 8 | 12 | +10% | 2 CVT |
-| Rogue | 80 | 15 | 5 | +30% | 2 CVT |
-| Mage | 70 | 18 | 3 | +40% | 3 CVT |
-| Ranger | 90 | 12 | 6 | +20% | 2.5 CVT |
-
-#### Character Death & Permadeath
-- **Death:** Character takes damage in dungeons/arenas; health reaches 0 = dead
-- **Consequence:** Character is permanently deleted, gear is lost (unless insured)
-- **Insurance:** Optional 0.5 CVT/month per character = respawn with 50% gear returned
-- **Alternative:** Players can buy resurrection scrolls (5 CVT) to revive 1x before next death
-
-### 3.2 Gear System
-
-#### Gear Slots & Stats
-- **Head, Chest, Legs, Feet, Hands, Mainhand, Offhand, Rings (2x):** 9 slots total
-- **Gear Quality Tiers:**
-  - **Common** (white): +1 stat, Durability 20
-  - **Uncommon** (green): +2-3 stats, Durability 30
-  - **Rare** (blue): +4-5 stats, Durability 50
-  - **Epic** (purple): +6-8 stats, Durability 75
-  - **Legendary** (gold): +10+ stats, Durability 100
-
-#### Durability & Repair
-- **Durability Loss:** Every hit taken in combat reduces gear durability by 1-5%
-- **Broken Gear:** At 0% durability, gear provides 0 stat bonuses but can't be destroyed
-- **Repair Cost:** 0.1-1 CVT per item based on rarity (repairs 50% durability)
-- **Full Restoration:** Costs 150% of repair price (full restore)
-- **Repair Time:** Instant on-chain, processed within 1 block
-
-#### Gear Trading
-- **Marketplace:** Buy/sell gear to other players
-- **Rarity-based Pricing:** Market algorithm suggests 0.01-100 CVT depending on tier
-- **Player Auctions:** 72-hour auction windows, 5% platform fee
-- **Bind on Pickup:** Legendary items stay bound to character (untradeable) for 7 days after drops
-
-### 3.3 Inventory & Storage
-- **Carrying Capacity:** 20 common items or equivalent weight (rares count as 3, epics as 5)
-- **Bank Storage:** Store up to 200 items (1 CVT rent per week)
-- **Auction House:** Store items for sale (0.5 CVT/item/week)
+The loop must feel fast, rewarding, and slightly risky.
 
 ---
 
 ## 4. Combat System
 
-### 4.1 Dungeons
+### 4.1 Combat Objectives
 
-#### Dungeon Structure
-- **Tiers by Difficulty:** Beginner (Level 1-5), Novice (6-15), Veteran (16-30), Elite (31+), Nightmare (50+)
-- **Floors:** 5-floor progression per dungeon
-  - Floor 1-4: Minions (weak but numerous)
-  - Floor 5: Boss (unique abilities, high loot)
+Combat must:
+- End in under 8 turns
+- Avoid infinite loops
+- Reward decision-making
+- Deliver tension through tradeoffs
 
-#### Combat Encounter
-- **Turn-based System:**
-  - Player and enemy take turns (player first)
-  - Each turn: Attack, Defend, Use Item, Flee
-  - Combat duration: 3-15 turns average
-  - Flee Success Rate: 60% (opponent gets free hit if failure)
+Balance targets:
+- Tanks survive longer but deal less damage
+- DPS deal high damage but are fragile
+- Hybrid classes remain viable without dominating
 
-#### Dungeon Rewards
-- **Base Reward:** 1-5 CVT + 10-100 common items
-- **Boss Bonus:** +5-20 CVT + guaranteed rare/epic drop
-- **Bonus Multipliers:**
-  - Speed Clear (< 5 turns): +50% loot
-  - No Damage Taken: +25% loot
-  - Solo Run (no help): +10% loot
-- **Loot Quality Formula:** `base_loot × (1 + player_damage_pct / 100) × quality_multiplier`
+### 4.2 Turn Structure
 
-#### Dungeon Entry Costs
-- **Free:** Beginner dungeons (limited to 3/day)
-- **Paid:** 0.1-2 CVT entry fee (scales with difficulty)
-- **Leaderboards:** Fastest clears earn bonus CVT weekly (top 100 split 50 CVT pool)
+- Player first on each encounter
+- Available actions:
+  - Attack
+  - Defend
+  - Use Item
+  - Skill / Special
+  - Escape
+- Combat ends when one side loses all health or player escapes
+- Average encounter length: 4–8 turns
 
-### 4.2 Arenas (PvP)
+### 4.3 Combat Systems
 
-#### Arena Modes
-| Mode | Players | Reward Structure | Frequency |
-|------|---------|------------------|-----------|
-| 1v1 Duel | 2 | Winner: 2-5 CVT, Loser: -0.5 CVT (repair only) | On-demand |
-| Team War (3v3) | 6 | Winners split 10 CVT, losers pay 1 CVT each | Hourly |
-| Royal Rumble (1v1vEvil) | Variable | Top 3 split 20 CVT pool | Every 6 hours |
-| Open World PvP | Unlimited | Zones drop 0.1-1 CVT loot, reputation-based | Always on |
+- Damage is calculated from stats, gear, buffs, and enemy resistances.
+- Defense reduces incoming damage and absorbs critical hits.
+- Skills are limited by short cooldowns, not mana, to keep pace fast.
+- Enemy behavior is predictable with readable telegraphs for counterplay.
 
-#### PvP Rules
-- **Gear Damage:** Losing in PvP damages gear 10-30% (vs 2-5% in dungeons)
-- **Insurance:** Covers PvP death same as dungeon death
-- **Ranking System:** ELO-based (starts at 1000), affects opponent matching and reward scaling
-- **Ragequit Penalty:** Leaving mid-arena = -10 ELO + can't queue for 30 mins
-- **Matchmaking:** ±200 ELO range to prevent newbie stomping
+### 4.4 Combat Rewards
 
-#### Anti-Griefing Measures
-- **Cooldown:** Can't attack same player more than once per 10 minutes
-- **Reputation System:** Killing low-level characters damages reputation (can't enter high-tier events)
-- **Safe Zones:** Starting areas + town hub = no PvP allowed
-- **Escape Zones:** Dungeons have "rest zones" where enemies don't spawn
+- Combat rewards are split into:
+  - Currency (CVT / crests)
+  - Gear items
+  - XP
+  - Temporary buffs
+- Risk modifiers improve rewards for harder plays:
+  - Fast clear: +50% loot
+  - No damage: +25% loot
+  - Boss defeat: + bonus CVT
 
 ---
 
-## 5. Progression & Meta
+## 5. Economy Design
 
-### 5.1 Leveling System
-- **XP Gain:** +10-50 XP per dungeon (scales with difficulty), +5-15 XP per PvP fight
-- **Level Cap:** 50
-- **Stats Per Level:** +2 Health, +1 Damage (or player can allocate manually)
-- **Milestones:** Every 5 levels = unlock new dungeon tier + earn 1 free character slot
+### 5.1 Currency Layers
 
-### 5.2 Quests & Events
-- **Daily Quests:** Kill 5 mobs, complete dungeon without taking damage, win 1 PvP (each = 0.5 CVT + 25 XP)
-- **Weekly Challenges:** Kill boss 5x, reach arena rank +50, farm 100 common items (rewards: 5 CVT + gear)
-- **Seasonal Events:** 
-  - Winter Siege (30 days): Group dungeon raids for 500 CVT pool
-  - Summer Games (30 days): PvP tournament bracket for 1000 CVT
-  - Fall Harvest: Resource farming (crops → sell for CVT)
+- **CVT:** Primary on-chain currency earned through gameplay and marketplace sales.
+- **USDC/ETH:** Fiat on-ramp for purchases and withdrawals.
+- **Crests:** Non-tradeable currency for cosmetics, battle pass, and temporary boosts.
 
-### 5.3 Crafting & Enchanting (Optional Phase 2)
-- **Crafting:** Combine 3× common items → 1× uncommon (costs 0.1 CVT essence)
-- **Enchanting:** Combine gear + rune stones (dropped loot) to boost stats (+10% per enchant, stacks to 5x)
+### 5.2 Inflation Control
+
+Economy must prevent runaway inflation through sinks:
+- Gear repair
+- Character insurance
+- Battle pass
+- Storage rent
+- Marketplace fees
+- Cosmetic purchases
+
+### 5.3 Revenue Model
+
+Primary revenue sources:
+- Cosmetics
+- Battle passes
+- Convenience items
+- Marketplace commissions
+- Withdraw fees
+
+Rules:
+- No direct stat purchases
+- No guaranteed wins
+- Spending should feel optional and rewarding
+
+### 5.4 Marketplace & Trading
+
+- Marketplace fees: 5% on sales
+- Auction windows: 72 hours
+- Legendary items bind on pickup for 7 days
+- Player-driven economy with platform-curated price guidance
 
 ---
 
-## 6. Website & Infrastructure
+## 6. Progression
 
-### 6.1 Frontend (Player Experience)
-- **Authentication:** MetaMask / Wallet Connect (gas-free login via signature)
-- **Dashboard:**
-  - Account balance (CVT, USDC)
-  - Character roster (level, health, gear, net worth)
-  - Gear inventory + repair interface
-  - Marketplace search & bidding
-  - Arena ranking + match history
-  - Leaderboards (XP, wealth, PvP wins, speedruns)
+### 6.1 Short-term Goals
 
-- **Game View:**
-  - Minimalist pixel UI (8-bit art style)
-  - Dungeon browser (select difficulty/floor)
-  - Combat HUD (turn indicator, health bars, damage numbers)
-  - Arena matchmaking (ELO display, opponent card)
-  - Post-fight summary (XP gained, items looted, durability report)
+Players should always have:
+- A next dungeon to clear
+- Better gear to chase
+- A clear reason to upgrade or change build
 
-- **Shop:**
-  - Character creation ($5-50 in CVT)
-  - Gear purchase (pre-crafted starter kits: "Knight Starter" = 10 CVT)
-  - Battle pass (10 CVT/month)
-  - Cosmetics (glow effects, name colors, pet skins, 5-50 CVT)
+### 6.2 Long-term Goals
 
-- **Settings:**
-  - Withdraw wallet (scan address, set 2FA)
-  - Insurance auto-renewal settings
-  - Notifications (PvP challenge, dungeon ready, items sold)
-  - Video settings (disable animations for speed)
+Long-term progression comes from:
+- Character collection
+- Gear optimization
+- Arena ranking climb
+- Seasonal objectives
+- Battle pass mastery
 
-### 6.2 Backend Architecture
-```
-Frontend (React/Vue)
-  ├── Web3.js / Ethers.js (wallet connection)
-  └── REST API / WebSocket (real-time combat)
-      ↓
-Game Server (Node.js + Express)
-  ├── Combat Engine (turn resolution, damage calc)
-  ├── Matchmaking (ELO, queue)
-  ├── Inventory Manager
-  └── API Gateway (rate limiting: 60 req/min per user)
-      ↓
-Database (PostgreSQL)
-  ├── User accounts (wallet, email, 2FA)
-  ├── Characters (stats, class, level, XP)
-  ├── Inventory (items, durability, bindings)
-  ├── Transactions (CVT transfer history)
-  └── Arena rankings & PvP history
-      ↓
-Blockchain (Ethereum / Polygon)
-  ├── Smart Contract (token, staking, marketplace)
-  ├── CVT Minting (rewards → blockchain)
-  └── Cross-chain Bridge (Ethereum ↔ Polygon)
-      ↓
-Payment Processor (Stripe for USDC → CVT conversion)
-```
+### 6.3 Leveling & Skill Growth
 
-### 6.3 Smart Contracts
-**Core Contract (CryptoVault.sol):**
-- `depositCVT(amount)` → add to account balance
-- `withdrawCVT(amount, wallet)` → deduct & send to wallet
-- `mintRewards(player, amount)` → called by backend when loot drops
-- `marketplaceListItem(itemId, price)` → for gear trading
-- `buyItem(itemId)` → execute transaction + 5% fee to treasury
-- `stakeTokens(amount)` → lock CVT for governance & rewards
-- `claimStakingRewards()` → withdraw APY gains
+- Level cap: 50
+- XP from dungeons, PvP, quests
+- Every 5 levels unlocks new content or slot capacity
+- Skill points are earned and allocated for build variety
 
-**NFT Contract (CharacterNFT.sol - Optional):**
-- Characters as tradeable NFTs (can list on OpenSea)
-- Increases secondary market & trading fees for platform
+### 6.4 Progression Rewards
 
-### 6.4 Website Pages
-| Page | Purpose |
-|------|---------|
-| `/login` | MetaMask auth |
-| `/dashboard` | Character overview, stats, net worth |
-| `/game/dungeons` | Browse & enter dungeons |
-| `/game/arena` | Join matches, view rankings |
+Each session should feel meaningful via:
+- XP and currency gains
+- New loot and gear upgrades
+- Cosmetic unlocks
+- Battle pass progression
+
+---
+
+## 7. Balance System
+
+### 7.1 Data Tracking
+
+Track the following metrics:
+- Win rates by dungeon, mode, and class
+- Skill usage rates
+- Time to kill
+- Average session duration
+- Economic velocity
+
+### 7.2 Adjustment Principles
+
+Adjust gradually:
+- Underperforming systems receive small buffs
+- Overperforming systems receive small nerfs
+- Avoid drastic changes that break existing builds
+
+### 7.3 Fairness Standards
+
+- Ensure skill matters more than spend
+- Keep progression and random rewards tuned
+- Prevent late-game power spikes from invalidating earlier builds
+
+---
+
+## 8. Monetization Strategy
+
+### 8.1 Primary Revenue Types
+
+- Cosmetics: skins, name colors, avatar frames
+- Battle pass: seasonal progression with optional premium tier
+- Convenience: inventory expansion, repair bundles, insurance
+- Premium entry modes: exclusive events with optional fees
+
+### 8.2 Monetization Rules
+
+- No stat-enhancing purchases
+- No guaranteed win items
+- Monetization should accelerate progression, not define it
+- Free players should remain competitive with smart play
+
+### 8.3 Player-Friendly Offers
+
+- Cosmetic bundles priced 5–50 CVT
+- Seasonal event passes with bonus loot
+- Limited-time convenience packs that save time
+- Value-oriented storefront items to support retention
+
+---
+
+## 9. Expansion Framework
+
+### 9.1 Content Roadmap
+
+Future expansions should include:
+- New classes
+- New dungeons
+- New cosmetic sets
+- Seasonal events
+- PvP modes and social systems
+
+### 9.2 Architecture Requirements
+
+System must support:
+- Adding content without breaking balance
+- Rotating metas every season
+- New loot pools with minimal code changes
+- Modular class and dungeon definitions
+
+### 9.3 Seasonal Rotation
+
+- Season length: 6–8 weeks
+- Each season introduces a new theme, event, and reward track
+- Rotation allows older content to remain accessible while spotlighting fresh goals
+
+---
+
+## 10. Optimization Directives
+
+Continuously improve:
+- Load times
+- UI clarity
+- Matchmaking speed
+
+Test for:
+- Player frustration points
+- Drop-off areas
+- Overpowered builds
+
+Goal: Relentless refinement until gameplay feels smooth, fair, and addictive.
+
+---
+
+## 11. System Architecture
+
+### 11.1 Frontend
+
+- React + Vite with Tailwind
+- Wallet auth via MetaMask / Wallet Connect
+- Fast UI with minimal transitions
+- Responsive dashboard, combat HUD, and match screens
+
+### 11.2 Backend
+
+- Node.js + Express or similar
+- REST API + WebSockets for real-time combat updates
+- Combat engine separate from persistence layer
+- Matchmaking and session management
+
+### 11.3 Persistence
+
+- PostgreSQL for accounts, characters, inventory, and transactions
+- Redis for matchmaking and live session state
+- Audit logs for economy and security
+
+### 11.4 Blockchain
+
+- ERC-20 CVT token
+- Staking / rewards contract
+- Marketplace contract for item sales and fees
+- Optional NFT contract for characters or cosmetics
+
+---
+
+## 12. Player Experience Flow
+
+### 12.1 Login
+- MetaMask / wallet login
+- Optional account binding and settings
+- Quick tutorial for first-time players
+
+### 12.2 Hub
+- Character roster
+- Wallet balance and currency overview
+- Ongoing quests and event notices
+- Recommended next activity
+
+### 12.3 Game Modes
+- Dungeon browser
+- Arena queue
+- Market and inventory management
+- Upgrade screen
+
+### 12.4 Post-Game Summary
+- Rewards earned
+- Loot received
+- Progress toward goals
+- Suggested next action
+
+---
+
+## 13. Metrics for Success
+
+Track and optimize:
+- Daily active users
+- Session length
+- Retention (D1, D7, D30)
+- Conversion to premium purchases
+- Economy balance (earn/spend ratio)
+- PvP match completion rate
+
+## 14. Name Transition
+
+While the legacy project name is CryptoVault, the upgraded identity for this core game experience is **VaultCrawler**. The product should keep the wallet/crypto positioning while emphasizing fast, tactical dungeon progression.
 | `/inventory` | Manage gear, repair, sell |
 | `/marketplace` | Buy/sell gear & characters |
 | `/shop` | Buy CVT, battle pass, cosmetics |
