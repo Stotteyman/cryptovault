@@ -93,8 +93,10 @@ export const apiClient = {
     api.post('/api/wheel/spin', data),
 
   // ===== PAYMENTS - STRIPE =====
-  createStripeCheckout: (data: { tier: string; returnUrl: string }) =>
+  createStripeCheckout: (data: { usdAmount: number; returnUrl: string }) =>
     api.post('/api/payments/stripe/checkout', data),
+  createCryptoCheckout: (data: { usdAmount: number; currency: string; network: string }) =>
+    api.post('/api/payments/crypto/checkout', data),
   verifyStripeCheckout: (sessionId: string) =>
     api.post('/api/payments/stripe/verify', { sessionId }),
   getVTPricingTiers: () => api.get('/api/payments/tiers'),
