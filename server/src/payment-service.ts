@@ -108,8 +108,8 @@ export async function createCryptoCheckout(options: {
   currency: keyof typeof CRYPTO_NETWORKS
   network: string
 }) {
-  const supportedNetworks = CRYPTO_NETWORKS[options.currency]
-  if (!supportedNetworks || !supportedNetworks.includes(options.network as any)) {
+  const supportedNetworks = [...CRYPTO_NETWORKS[options.currency]] as string[]
+  if (!supportedNetworks.includes(options.network)) {
     throw new Error('Unsupported currency or network selection')
   }
 

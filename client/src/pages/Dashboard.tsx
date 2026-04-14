@@ -118,7 +118,7 @@ export default function Dashboard() {
           >
             <p className="text-5xl">💰</p>
             <h2 className="mt-4 text-2xl font-semibold text-white">Add VT</h2>
-            <p className="mt-3 text-slate-400">Add Vault Tokens to your account using crypto or Stripe packs.</p>
+            <p className="mt-3 text-slate-400">Add Vault Tokens with card checkout or an opened crypto transaction by currency and network.</p>
           </div>
 
           <div

@@ -3,28 +3,58 @@ import { getPurchaseByTransactionId, recordPurchase, incrementAccountBalance } f
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
     apiVersion: '2024-04-10',
 });
-// VT pricing tiers
+export const VT_PER_USD = 100;
+export function usdToVt(usdAmount) {
+    return Math.round(usdAmount * VT_PER_USD);
+}
+export function vtToUsd(vtAmount) {
+    return Number((vtAmount / VT_PER_USD).toFixed(2));
+}
+// Legacy VT pricing tiers retained for compatibility, now aligned to exact conversion.
 export const VT_PRICING = {
-    tier_1: { price: 4.99, vt: 500, name: 'Starter Pack' },
-    tier_2: { price: 19.99, vt: 2500, name: 'Adventure Pack' },
-    tier_3: { price: 49.99, vt: 6500, name: 'Legend Pack' },
-    tier_4: { price: 99.99, vt: 13000, name: 'Vault Pack' },
+    tier_1: { price: vtToUsd(500), vt: 500, name: 'Starter Pack' },
+    tier_2: { price: vtToUsd(2500), vt: 2500, name: 'Adventure Pack' },
+    tier_3: { price: vtToUsd(6500), vt: 6500, name: 'Legend Pack' },
+    tier_4: { price: vtToUsd(13000), vt: 13000, name: 'Vault Pack' },
 };
 export const IAP_PRICING = {
-    apple_starter: { price: 4.99, vt: 500, productId: 'com.vaultcrawler.vt_500' },
-    apple_adventure: { price: 19.99, vt: 2500, productId: 'com.vaultcrawler.vt_2500' },
-    apple_legend: { price: 49.99, vt: 6500, productId: 'com.vaultcrawler.vt_6500' },
-    apple_vault: { price: 99.99, vt: 13000, productId: 'com.vaultcrawler.vt_13000' },
-    google_starter: { price: 4.99, vt: 500, productId: 'vt_500_package' },
-    google_adventure: { price: 19.99, vt: 2500, productId: 'vt_2500_package' },
-    google_legend: { price: 49.99, vt: 6500, productId: 'vt_6500_package' },
-    google_vault: { price: 99.99, vt: 13000, productId: 'vt_13000_package' },
+    apple_starter: { price: vtToUsd(500), vt: 500, productId: 'com.vaultcrawler.vt_500' },
+    apple_adventure: { price: vtToUsd(2500), vt: 2500, productId: 'com.vaultcrawler.vt_2500' },
+    apple_legend: { price: vtToUsd(6500), vt: 6500, productId: 'com.vaultcrawler.vt_6500' },
+    apple_vault: { price: vtToUsd(13000), vt: 13000, productId: 'com.vaultcrawler.vt_13000' },
+    google_starter: { price: vtToUsd(500), vt: 500, productId: 'vt_500_package' },
+    google_adventure: { price: vtToUsd(2500), vt: 2500, productId: 'vt_2500_package' },
+    google_legend: { price: vtToUsd(6500), vt: 6500, productId: 'vt_6500_package' },
+    google_vault: { price: vtToUsd(13000), vt: 13000, productId: 'vt_13000_package' },
 };
+const CRYPTO_NETWORKS = {
+    BTC: ['Bitcoin'],
+    ETH: ['Ethereum', 'Base', 'Arbitrum'],
+    USDC: ['Ethereum', 'Base', 'Polygon'],
+    USDT: ['Ethereum', 'Polygon', 'Tron'],
+};
+const CRYPTO_USD_RATES = {
+    BTC: 85000,
+    ETH: 3200,
+    USDC: 1,
+    USDT: 1,
+};
+const CRYPTO_RECEIVE_ADDRESSES = {
+    Bitcoin: 'bc1qvaultcrawlerfunding0demoaddress7z8x9c',
+    Ethereum: '0x8F2A6D4bC71A5D6b3d8C9B0F9a1E4C6D2e8F3A90',
+    Base: '0x8F2A6D4bC71A5D6b3d8C9B0F9a1E4C6D2e8F3A90',
+    Arbitrum: '0x8F2A6D4bC71A5D6b3d8C9B0F9a1E4C6D2e8F3A90',
+    Polygon: '0x8F2A6D4bC71A5D6b3d8C9B0F9a1E4C6D2e8F3A90',
+    Tron: 'TVaultCrawlerFundingDemo123456789AbCdEf',
+};
+export function getCryptoPaymentOptions() {
+    return CRYPTO_NETWORKS;
+}
 /**
  * Create Stripe checkout session
  */
 export async function createCheckoutSession(options) {
-    const pricing = VT_PRICING[options.tier];
+    const vtAmount = usdToVt(options.usdAmount);
     const successUrl = new URL(options.returnUrl);
     successUrl.searchParams.set('session_id', '{CHECKOUT_SESSION_ID}');
     const session = await stripe.checkout.sessions.create({
@@ -35,10 +65,10 @@ export async function createCheckoutSession(options) {
                 price_data: {
                     currency: 'usd',
                     product_data: {
-                        name: pricing.name,
-                        description: `${pricing.vt} Vault Tokens`,
+                        name: 'Vault Tokens',
+                        description: `${vtAmount} Vault Tokens`,
                     },
-                    unit_amount: Math.round(pricing.price * 100),
+                    unit_amount: Math.round(options.usdAmount * 100),
                 },
                 quantity: 1,
             },
@@ -46,13 +76,37 @@ export async function createCheckoutSession(options) {
         client_reference_id: options.accountId,
         metadata: {
             accountId: options.accountId,
-            tier: options.tier,
-            vtAmount: pricing.vt.toString(),
+            vtAmount: vtAmount.toString(),
+            usdAmount: options.usdAmount.toFixed(2),
         },
         success_url: successUrl.toString(),
         cancel_url: options.returnUrl,
     });
     return session.url || '';
+}
+export async function createCryptoCheckout(options) {
+    const supportedNetworks = [...CRYPTO_NETWORKS[options.currency]];
+    if (!supportedNetworks.includes(options.network)) {
+        throw new Error('Unsupported currency or network selection');
+    }
+    const vtAmount = usdToVt(options.usdAmount);
+    const rate = CRYPTO_USD_RATES[options.currency];
+    const cryptoAmount = Number((options.usdAmount / rate).toFixed(options.currency === 'BTC' ? 8 : 6));
+    const transactionId = `crypto_${Date.now()}`;
+    return {
+        transactionId,
+        status: 'pending',
+        accountId: options.accountId,
+        usdAmount: Number(options.usdAmount.toFixed(2)),
+        vtAmount,
+        currency: options.currency,
+        network: options.network,
+        estimatedAmount: cryptoAmount,
+        receiveAddress: CRYPTO_RECEIVE_ADDRESSES[options.network],
+        rateUsedUsd: rate,
+        expiresAt: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
+        memo: transactionId,
+    };
 }
 /**
  * Retrieve and verify Stripe checkout session
@@ -150,7 +204,7 @@ export async function verifyGoogleIAP(options) {
  * Handle direct VT purchase (USD to VT conversion: 1 USD = 100 VT)
  */
 export async function purchaseDirectVT(options) {
-    const vtAmount = Math.round(options.usdAmount * 100);
+    const vtAmount = usdToVt(options.usdAmount);
     // Record purchase
     await recordPurchase({
         accountId: options.accountId,
