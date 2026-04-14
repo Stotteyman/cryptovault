@@ -11,9 +11,8 @@ command = "npm run build"
 publish = "client/dist"
 functions = "functions"
 
-# Environment variables
+# Environment variables (for build)
 [build.environment]
-NODE_ENV = "production"
 VITE_API_URL = "https://cryptovault-api.netlify.app"
 
 # Redirects
