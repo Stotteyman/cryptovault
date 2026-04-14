@@ -7,6 +7,8 @@ if (!supabaseUrl || !supabaseKey) {
     throw new Error('Missing Supabase environment variables');
 }
 export const supabase = createClient(supabaseUrl, supabaseKey);
+let fallbackInUse = false;
+let lastSupabaseSuccessAt = null;
 const memoryDb = {
     accounts: new Map(),
     accountByAuthId: new Map(),
@@ -20,7 +22,39 @@ function createMemoryId(prefix) {
 }
 function shouldUseMemoryFallback(error) {
     const message = String(error?.message || error || '').toLowerCase();
-    return message.includes('fetch failed') || message.includes('network') || message.includes('timeout');
+    const shouldFallback = message.includes('fetch failed') || message.includes('network') || message.includes('timeout');
+    if (shouldFallback) {
+        fallbackInUse = true;
+    }
+    return shouldFallback;
+}
+export function isFallbackInUse() {
+    return fallbackInUse;
+}
+export function getLastSupabaseSuccessAt() {
+    return lastSupabaseSuccessAt;
+}
+export async function checkSupabaseConnection() {
+    try {
+        const { error } = await supabase.from('accounts').select('id').limit(1);
+        if (error)
+            throw error;
+        fallbackInUse = false;
+        lastSupabaseSuccessAt = new Date().toISOString();
+        return {
+            connected: true,
+            fallbackInUse,
+            lastSupabaseSuccessAt,
+        };
+    }
+    catch (error) {
+        return {
+            connected: false,
+            fallbackInUse,
+            lastSupabaseSuccessAt,
+            error: error?.message || 'Unknown Supabase connection error',
+        };
+    }
 }
 /**
  * Initialize database schema and tables

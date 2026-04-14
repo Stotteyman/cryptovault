@@ -81,6 +81,20 @@ app.get('/health', (req: Request, res: Response) => {
   res.json({ status: 'Server is running', timestamp: new Date().toISOString() })
 })
 
+app.get('/api/diagnostics/supabase', async (req: Request, res: Response) => {
+  try {
+    const status = await supabase.checkSupabaseConnection()
+    res.json(status)
+  } catch (error: any) {
+    res.status(500).json({
+      connected: false,
+      error: error.message,
+      fallbackInUse: supabase.isFallbackInUse(),
+      lastSupabaseSuccessAt: supabase.getLastSupabaseSuccessAt(),
+    })
+  }
+})
+
 app.get('/api/characters', async (req: Request, res: Response) => {
   try {
     const { walletAddress } = req.query

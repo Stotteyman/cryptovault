@@ -59,6 +59,20 @@ app.use('/api', paymentRoutes);
 app.get('/health', (req, res) => {
     res.json({ status: 'Server is running', timestamp: new Date().toISOString() });
 });
+app.get('/api/diagnostics/supabase', async (req, res) => {
+    try {
+        const status = await supabase.checkSupabaseConnection();
+        res.json(status);
+    }
+    catch (error) {
+        res.status(500).json({
+            connected: false,
+            error: error.message,
+            fallbackInUse: supabase.isFallbackInUse(),
+            lastSupabaseSuccessAt: supabase.getLastSupabaseSuccessAt(),
+        });
+    }
+});
 app.get('/api/characters', async (req, res) => {
     try {
         const { walletAddress } = req.query;
