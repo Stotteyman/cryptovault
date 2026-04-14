@@ -75,7 +75,6 @@ In Netlify Dashboard:
 2. Add these variables:
 
 ```
-VITE_API_URL = https://cryptovault-api.netlify.app
 VITE_CHAIN_ID = 137
 VITE_RPC_URL = https://polygon-rpc.com
 NODE_ENV = production

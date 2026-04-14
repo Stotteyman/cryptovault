@@ -20,7 +20,19 @@ const matchmakingEngine = new MatchmakingEngine()
 // CORS configuration
 app.use(
   cors({
-    origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
+    origin: (origin, callback) => {
+      const configuredOrigins = (process.env.CORS_ORIGIN || 'http://localhost:5173,http://localhost:3000')
+        .split(',')
+        .map((value) => value.trim())
+        .filter(Boolean)
+
+      if (!origin || configuredOrigins.includes(origin)) {
+        callback(null, true)
+        return
+      }
+
+      callback(null, false)
+    },
     credentials: true,
   })
 )
@@ -70,13 +82,6 @@ const accountInfo = {
 
 const accountBalance = { cvtBalance: 120.5 }
 
-app.use(cors())
-app.use(express.json())
-
-// Register route modules
-app.use('/api', authRoutes)
-app.use('/api', paymentRoutes)
-
 app.get('/health', (req: Request, res: Response) => {
   res.json({ status: 'Server is running', timestamp: new Date().toISOString() })
 })
@@ -116,6 +121,19 @@ app.get('/api/characters', async (req: Request, res: Response) => {
   }
 })
 
+app.get('/api/characters/classes', (req: Request, res: Response) => {
+  const classes = Object.values(characterService.CHARACTER_CLASSES).map((c) => ({
+    id: c.id,
+    name: c.name,
+    description: c.description,
+    health: c.health,
+    attack: c.attack,
+    defense: c.defense,
+    cost: c.cost,
+  }))
+  res.json({ classes })
+})
+
 app.get('/api/characters/:id', async (req: Request, res: Response) => {
   try {
     const characterId = req.params.id
@@ -129,19 +147,6 @@ app.get('/api/characters/:id', async (req: Request, res: Response) => {
   } catch (error: any) {
     res.status(500).json({ error: error.message })
   }
-})
-
-app.get('/api/characters/classes', (req: Request, res: Response) => {
-  const classes = Object.values(characterService.CHARACTER_CLASSES).map((c) => ({
-    id: c.id,
-    name: c.name,
-    description: c.description,
-    health: c.health,
-    attack: c.attack,
-    defense: c.defense,
-    cost: c.cost,
-  }))
-  res.json({ classes })
 })
 
 app.post('/api/characters', async (req: Request, res: Response) => {
@@ -540,9 +545,11 @@ app.use((err: any, req: Request, res: Response, next: any) => {
   res.status(500).json({ error: 'Internal server error' })
 })
 
-app.listen(PORT, () => {
-  console.log(`Vault Crawler Server running on http://localhost:${PORT}`)
-  console.log('Health check: http://localhost:' + PORT + '/health')
-})
+if (!process.env.NETLIFY && !process.env.AWS_LAMBDA_FUNCTION_NAME) {
+  app.listen(PORT, () => {
+    console.log(`Vault Crawler Server running on http://localhost:${PORT}`)
+    console.log('Health check: http://localhost:' + PORT + '/health')
+  })
+}
 
 export default app

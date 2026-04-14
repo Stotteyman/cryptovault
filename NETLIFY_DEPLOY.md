@@ -28,7 +28,6 @@ Fill in these settings:
 Add these environment variables in **Site settings** → **Build & deploy** → **Environment**:
 
 ```
-VITE_API_URL=https://cryptovault-api.netlify.app
 VITE_CHAIN_ID=137
 NODE_ENV=production
 ```

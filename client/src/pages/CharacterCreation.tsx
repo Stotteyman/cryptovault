@@ -23,6 +23,7 @@ interface CostBreakdown {
 }
 
 export default function CharacterCreation() {
+  const defaultNameColor = '#00d9ff'
   const navigate = useNavigate()
   const { account } = useWallet()
   const { account: authAccount } = useAuth()
@@ -31,6 +32,7 @@ export default function CharacterCreation() {
   const [selectedClass, setSelectedClass] = useState<string>('')
   const [name, setName] = useState('')
   const [color, setColor] = useState(false)
+  const [selectedColor, setSelectedColor] = useState(defaultNameColor)
   const [effect, setEffect] = useState(false)
   const [costs, setCosts] = useState<CostBreakdown | null>(null)
   const [status, setStatus] = useState('')
@@ -88,15 +90,22 @@ export default function CharacterCreation() {
 
     setStatus('Creating character...')
     try {
-      await apiClient.createCharacter({
+      const response = await apiClient.createCharacter({
         walletAddress: effectiveWallet,
         name: name.trim(),
         classId: selectedClass,
-        color: color ? '#00d9ff' : undefined,
+        color: color ? selectedColor : undefined,
         effect: effect ? 'glow' : undefined,
       })
-      setStatus('Character created! Redirecting to dashboard...')
-      setTimeout(() => navigate('/dashboard'), 800)
+      const characterId = response.data?.character?.id
+      setStatus('Character created! Opening character menu...')
+
+      if (characterId) {
+        navigate(`/characters/${characterId}`)
+        return
+      }
+
+      navigate('/characters')
     } catch (error: any) {
       console.error('Character creation failed:', error)
       const message = error.response?.data?.error || 'Unable to create character. Please try again.'
@@ -156,6 +165,16 @@ export default function CharacterCreation() {
                 />
                 <p className="mt-2 text-xs text-slate-500">{name.length}/30 characters</p>
 
+                <div className="mt-4 rounded-2xl bg-slate-800/50 p-4">
+                  <p className="text-xs font-medium text-slate-400">Name Preview</p>
+                  <p
+                    className="mt-2 text-xl font-semibold"
+                    style={{ color: color ? selectedColor : undefined }}
+                  >
+                    {name.trim() || 'Your character name'}
+                  </p>
+                </div>
+
                 {name.length > 0 && (
                   <div className="mt-4 space-y-3 rounded-2xl bg-slate-800/50 p-4">
                     <p className="text-xs font-medium text-slate-400">Name Length Pricing:</p>
@@ -188,6 +207,22 @@ export default function CharacterCreation() {
                     />
                     <span className="text-sm text-slate-300">Add Color (+10,000 VT)</span>
                   </label>
+                  {color && (
+                    <div className="rounded-2xl border border-slate-800 bg-slate-900 p-4">
+                      <label className="flex items-center justify-between gap-4">
+                        <span className="text-sm text-slate-300">Choose name color</span>
+                        <div className="flex items-center gap-3">
+                          <input
+                            type="color"
+                            value={selectedColor}
+                            onChange={(e) => setSelectedColor(e.target.value)}
+                            className="h-10 w-16 cursor-pointer rounded-lg border border-slate-700 bg-slate-950 p-1"
+                          />
+                          <span className="text-sm text-slate-400">{selectedColor.toUpperCase()}</span>
+                        </div>
+                      </label>
+                    </div>
+                  )}
                   <label className="flex items-center gap-3 cursor-pointer">
                     <input
                       type="checkbox"

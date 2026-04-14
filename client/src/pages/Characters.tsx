@@ -13,6 +13,7 @@ interface Character {
   attack: number
   defense: number
   experience?: number
+  nameColor?: string | null
 }
 
 export default function Characters() {
@@ -115,7 +116,9 @@ export default function Characters() {
             {characters.map((character) => (
               <div key={character.id} className="rounded-3xl border border-slate-800 bg-slate-950 p-6">
                 <div className="flex items-center justify-between">
-                  <h2 className="text-2xl font-semibold text-white">{character.name}</h2>
+                  <h2 className="text-2xl font-semibold" style={{ color: character.nameColor || undefined }}>
+                    {character.name}
+                  </h2>
                   <span className="rounded-full bg-slate-800 px-3 py-1 text-xs uppercase tracking-[0.2em] text-slate-300">
                     {character.class}
                   </span>
@@ -128,14 +131,23 @@ export default function Characters() {
                 </div>
                 <p className="mt-2 text-sm text-slate-500">XP {character.experience || 0}</p>
 
-                <button
-                  type="button"
-                  onClick={() => handleLevelUp(character.id)}
-                  disabled={!canManage || busyCharacterId === character.id}
-                  className="mt-5 rounded-2xl bg-emerald-500 px-5 py-3 text-sm font-semibold text-slate-950 transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  {busyCharacterId === character.id ? 'Leveling...' : `Level Up (${Math.max(100, character.level * 100)} VT)`}
-                </button>
+                <div className="mt-5 flex flex-wrap gap-3">
+                  <button
+                    type="button"
+                    onClick={() => navigate(`/characters/${character.id}`)}
+                    className="rounded-2xl bg-cyan-500 px-5 py-3 text-sm font-semibold text-slate-950 transition hover:bg-cyan-400"
+                  >
+                    Open Menu
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleLevelUp(character.id)}
+                    disabled={!canManage || busyCharacterId === character.id}
+                    className="rounded-2xl bg-emerald-500 px-5 py-3 text-sm font-semibold text-slate-950 transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {busyCharacterId === character.id ? 'Leveling...' : `Quick Level Up (${Math.max(100, character.level * 100)} VT)`}
+                  </button>
+                </div>
               </div>
             ))}
           </div>

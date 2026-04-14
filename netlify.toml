@@ -11,11 +11,17 @@ command = "npm run build"
 publish = "client/dist"
 functions = "functions"
 
-# Environment variables (for build)
-[build.environment]
-VITE_API_URL = "https://cryptovault-api.netlify.app"
-
 # Redirects
+[[redirects]]
+from = "/api/*"
+to = "/.netlify/functions/api/:splat"
+status = 200
+
+[[redirects]]
+from = "/health"
+to = "/.netlify/functions/api/health"
+status = 200
+
 [[redirects]]
 from = "/*"
 to = "/index.html"

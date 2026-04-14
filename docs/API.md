@@ -2,7 +2,7 @@
 
 ## Base URL
 - Development: `http://localhost:5000`
-- Production: `https://cryptovault-api.netlify.app`
+- Production: same-origin API routes via Netlify Functions (`/api/...`)
 
 ## Endpoints
 

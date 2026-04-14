@@ -114,11 +114,17 @@ export async function createCryptoCheckout(options) {
 export async function verifyCheckoutSession(sessionId) {
     const existingPurchase = await getPurchaseByTransactionId(sessionId);
     if (existingPurchase) {
-        return true;
+        return {
+            verified: true,
+            accountId: existingPurchase.account_id,
+            vtAmount: existingPurchase.vt_amount || 0,
+            usdAmount: existingPurchase.amount_usd || 0,
+            alreadyRecorded: true,
+        };
     }
     const session = await stripe.checkout.sessions.retrieve(sessionId);
-    if (session.payment_status === 'paid' && session.client_reference_id) {
-        const accountId = session.client_reference_id;
+    const accountId = session.client_reference_id || session.metadata?.accountId || null;
+    if (session.payment_status === 'paid' && accountId) {
         const vtAmount = session.metadata?.vtAmount ? parseInt(session.metadata.vtAmount) : 0;
         const usdAmount = (session.amount_total || 0) / 100;
         // Record purchase in database
@@ -132,9 +138,21 @@ export async function verifyCheckoutSession(sessionId) {
         });
         // Add VT to account balance
         await incrementAccountBalance(accountId, vtAmount);
-        return true;
+        return {
+            verified: true,
+            accountId,
+            vtAmount,
+            usdAmount,
+            alreadyRecorded: false,
+        };
     }
-    return false;
+    return {
+        verified: false,
+        accountId,
+        vtAmount: 0,
+        usdAmount: 0,
+        alreadyRecorded: false,
+    };
 }
 /**
  * Verify Apple in-app purchase receipt

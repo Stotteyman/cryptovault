@@ -7,6 +7,10 @@ const router = Router()
 
 // Middleware to verify token
 async function verifyAuth(req: Request, res: Response, next: any) {
+  if (req.path === '/stripe/verify') {
+    return next()
+  }
+
   const token = req.headers.authorization?.replace('Bearer ', '')
   if (!token) {
     return res.status(401).json({ error: 'Unauthorized' })
@@ -111,20 +115,20 @@ router.post('/payments/vt/purchase', async (req: Request, res: Response) => {
 router.post('/payments/stripe/verify', async (req: Request, res: Response) => {
   try {
     const { sessionId } = req.body
-    const accountId = (req as any).userId
 
     if (!sessionId) {
       return res.status(400).json({ error: 'Session ID is required' })
     }
 
-    const success = await paymentService.verifyCheckoutSession(sessionId)
+    const verification = await paymentService.verifyCheckoutSession(sessionId)
 
-    if (success) {
-      const account = await supabase.getAccount(accountId)
+    if (verification.verified && verification.accountId) {
+      const account = await supabase.getAccount(verification.accountId)
       res.json({
         success: true,
-        message: 'Purchase verified',
+        message: verification.alreadyRecorded ? 'Purchase already verified' : 'Purchase verified',
         balance: account.cvt_balance,
+        vtAmount: verification.vtAmount,
       })
     } else {
       res.status(400).json({ error: 'Payment not completed' })

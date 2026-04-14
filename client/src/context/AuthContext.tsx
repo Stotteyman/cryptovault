@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
 import { apiClient } from '../services/api'
+import { useWallet } from './WalletContext'
 
 type AuthProvider = 'google' | 'apple' | 'discord' | 'steam' | 'metamask'
 
@@ -31,6 +32,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
+  const { account: walletAccount } = useWallet()
   const [user, setUser] = useState<AuthUser | null>(null)
   const [token, setToken] = useState<string | null>(null)
   const [account, setAccount] = useState<any>(null)
@@ -53,6 +55,46 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     setInitializing(false)
   }, [])
+
+  useEffect(() => {
+    if (initializing || token || !walletAccount) {
+      return
+    }
+
+    let cancelled = false
+
+    const restoreWalletAuth = async () => {
+      try {
+        setLoading(true)
+        const response = await apiClient.loginWallet(walletAccount)
+
+        if (cancelled) {
+          return
+        }
+
+        setToken(response.data.token)
+        setUser(response.data.user)
+        setAuthProvider('metamask')
+
+        localStorage.setItem('authToken', response.data.token)
+        localStorage.setItem('authProvider', 'metamask')
+
+        await hydrateAccountFromToken(response.data.token)
+      } catch (error) {
+        console.error('Wallet auth restore failed:', error)
+      } finally {
+        if (!cancelled) {
+          setLoading(false)
+        }
+      }
+    }
+
+    restoreWalletAuth()
+
+    return () => {
+      cancelled = true
+    }
+  }, [initializing, token, walletAccount])
 
   const verifyStoredToken = async (token: string) => {
     try {
