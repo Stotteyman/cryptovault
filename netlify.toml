@@ -1,0 +1,44 @@
+# Netlify Configuration for CryptoVault
+
+# Development settings
+[dev]
+site_id = "your-site-id"
+live_functions = "functions"
+
+# Build settings
+[build]
+command = "npm run build"
+publish = "client/dist"
+functions = "functions"
+
+# Environment variables
+[build.environment]
+NODE_ENV = "production"
+VITE_API_URL = "https://cryptovault-api.netlify.app"
+
+# Redirects
+[[redirects]]
+from = "/*"
+to = "/index.html"
+status = 200
+
+# Headers
+[[headers]]
+for = "/*"
+[headers.values]
+X-Content-Type-Options = "nosniff"
+X-Frame-Options = "DENY"
+X-XSS-Protection = "1; mode=block"
+Referrer-Policy = "strict-origin-when-cross-origin"
+Permissions-Policy = "geolocation=()"
+
+# Cache
+[[headers]]
+for = "/*.{js,css,svg,png,jpg,gif,woff,woff2}"
+[headers.values]
+Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+for = "/index.html"
+[headers.values]
+Cache-Control = "public, max-age=0, must-revalidate"

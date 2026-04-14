@@ -1,0 +1,13 @@
+{
+  "name": "cryptovault-contracts",
+  "version": "0.1.0",
+  "description": "CryptoVault Smart Contracts",
+  "scripts": {
+    "test": "echo \"Run: npx hardhat test\"",
+    "compile": "echo \"Run: npx hardhat compile\"",
+    "deploy": "echo \"Run: npx hardhat run scripts/deploy.ts --network polygon\""
+  },
+  "devDependencies": {
+    "@openzeppelin/contracts": "^5.0.0"
+  }
+}
