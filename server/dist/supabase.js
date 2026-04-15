@@ -14,6 +14,7 @@ const memoryDb = {
     accountByAuthId: new Map(),
     accountByWallet: new Map(),
     characters: new Map(),
+    inventoryItems: new Map(),
     purchases: [],
     trades: [],
 };
@@ -418,6 +419,168 @@ export async function getPurchaseHistory(accountId) {
         return memoryDb.purchases
             .filter((p) => p.account_id === accountId)
             .sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)));
+    }
+}
+// ===== INVENTORY OPERATIONS =====
+export async function getInventoryByAccount(accountId) {
+    try {
+        const { data, error } = await supabase
+            .from('inventory_items')
+            .select('*')
+            .eq('account_id', accountId)
+            .order('acquired_at', { ascending: false });
+        if (error)
+            throw error;
+        return data || [];
+    }
+    catch (error) {
+        if (!shouldUseMemoryFallback(error))
+            throw error;
+        return Array.from(memoryDb.inventoryItems.values())
+            .filter((item) => item.account_id === accountId)
+            .sort((a, b) => String(b.acquired_at).localeCompare(String(a.acquired_at)));
+    }
+}
+export async function addInventoryItem(input) {
+    try {
+        const { data: existing, error: existingError } = await supabase
+            .from('inventory_items')
+            .select('*')
+            .eq('account_id', input.accountId)
+            .eq('item_id', input.itemId)
+            .single();
+        if (existingError && existingError.code !== 'PGRST116') {
+            throw existingError;
+        }
+        if (existing) {
+            const { data, error } = await supabase
+                .from('inventory_items')
+                .update({ quantity: (existing.quantity || 0) + 1 })
+                .eq('id', existing.id)
+                .select('*')
+                .single();
+            if (error)
+                throw error;
+            return data;
+        }
+        const { data, error } = await supabase
+            .from('inventory_items')
+            .insert({
+            account_id: input.accountId,
+            item_id: input.itemId,
+            name: input.name,
+            category: input.category,
+            description: input.description || null,
+            rarity: input.rarity || 'common',
+            quantity: 1,
+            equipped: false,
+        })
+            .select('*')
+            .single();
+        if (error)
+            throw error;
+        return data;
+    }
+    catch (error) {
+        if (!shouldUseMemoryFallback(error))
+            throw error;
+        const existing = Array.from(memoryDb.inventoryItems.values()).find((item) => item.account_id === input.accountId && item.item_id === input.itemId);
+        if (existing) {
+            existing.quantity = (existing.quantity || 0) + 1;
+            existing.updated_at = new Date().toISOString();
+            memoryDb.inventoryItems.set(existing.id, existing);
+            return existing;
+        }
+        const id = createMemoryId('inv');
+        const row = {
+            id,
+            account_id: input.accountId,
+            item_id: input.itemId,
+            name: input.name,
+            category: input.category,
+            description: input.description || null,
+            rarity: input.rarity || 'common',
+            quantity: 1,
+            equipped: false,
+            acquired_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+        };
+        memoryDb.inventoryItems.set(id, row);
+        return row;
+    }
+}
+export async function setInventoryEquipped(accountId, inventoryItemId, equipped) {
+    try {
+        const { data, error } = await supabase
+            .from('inventory_items')
+            .update({ equipped })
+            .eq('id', inventoryItemId)
+            .eq('account_id', accountId)
+            .select('*')
+            .single();
+        if (error)
+            throw error;
+        return data;
+    }
+    catch (error) {
+        if (!shouldUseMemoryFallback(error))
+            throw error;
+        const existing = memoryDb.inventoryItems.get(inventoryItemId);
+        if (!existing || existing.account_id !== accountId) {
+            throw new Error('Inventory item not found');
+        }
+        existing.equipped = equipped;
+        existing.updated_at = new Date().toISOString();
+        memoryDb.inventoryItems.set(inventoryItemId, existing);
+        return existing;
+    }
+}
+export async function discardInventoryItem(accountId, inventoryItemId) {
+    try {
+        const { data: existing, error: existingError } = await supabase
+            .from('inventory_items')
+            .select('*')
+            .eq('id', inventoryItemId)
+            .eq('account_id', accountId)
+            .single();
+        if (existingError)
+            throw existingError;
+        if ((existing.quantity || 1) > 1) {
+            const { data, error } = await supabase
+                .from('inventory_items')
+                .update({ quantity: existing.quantity - 1 })
+                .eq('id', inventoryItemId)
+                .eq('account_id', accountId)
+                .select('*')
+                .single();
+            if (error)
+                throw error;
+            return { removed: false, item: data };
+        }
+        const { error } = await supabase
+            .from('inventory_items')
+            .delete()
+            .eq('id', inventoryItemId)
+            .eq('account_id', accountId);
+        if (error)
+            throw error;
+        return { removed: true, item: null };
+    }
+    catch (error) {
+        if (!shouldUseMemoryFallback(error))
+            throw error;
+        const existing = memoryDb.inventoryItems.get(inventoryItemId);
+        if (!existing || existing.account_id !== accountId) {
+            throw new Error('Inventory item not found');
+        }
+        if ((existing.quantity || 1) > 1) {
+            existing.quantity = existing.quantity - 1;
+            existing.updated_at = new Date().toISOString();
+            memoryDb.inventoryItems.set(inventoryItemId, existing);
+            return { removed: false, item: existing };
+        }
+        memoryDb.inventoryItems.delete(inventoryItemId);
+        return { removed: true, item: null };
     }
 }
 // ===== TRADE OPERATIONS =====

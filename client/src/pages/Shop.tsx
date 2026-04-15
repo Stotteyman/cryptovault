@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { apiClient } from '../services/api'
 import { Link, useNavigate } from 'react-router-dom'
+import { useAuth } from '../context/AuthContext'
+import { useWallet } from '../context/WalletContext'
 
 interface ShopItem {
   id: number
@@ -12,6 +14,9 @@ interface ShopItem {
 
 export default function Shop() {
   const navigate = useNavigate()
+  const { account: walletAccount } = useWallet()
+  const { account: authAccount } = useAuth()
+  const walletAddress = walletAccount || authAccount?.wallet_address || ''
   const [items, setItems] = useState<ShopItem[]>([])
   const [loading, setLoading] = useState(true)
   const [message, setMessage] = useState('Browse categories and purchase items with your VT balance.')
@@ -32,13 +37,18 @@ export default function Shop() {
   }, [])
 
   const handleItemPurchase = async (itemId: number) => {
+    if (!walletAddress) {
+      setMessage('Connect a wallet-linked account before purchasing items.')
+      return
+    }
+
     setMessage('Completing item purchase...')
     try {
-      const response = await apiClient.purchaseShopItem({ itemId })
-      setMessage(response.data.message)
-    } catch (error) {
+      const response = await apiClient.purchaseShopItem({ itemId, walletAddress })
+      setMessage(`${response.data.message}. New balance: ${response.data.cvtBalance.toFixed(2)} VT.`)
+    } catch (error: any) {
       console.error('Item purchase failed:', error)
-      setMessage('Item purchase failed. Try again.')
+      setMessage(error?.response?.data?.error || 'Item purchase failed. Try again.')
     }
   }
 
@@ -67,6 +77,13 @@ export default function Shop() {
               className="rounded-2xl bg-emerald-500 px-5 py-3 text-sm font-semibold text-slate-950 transition hover:bg-emerald-400"
             >
               Add VT
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate('/inventory')}
+              className="rounded-2xl bg-slate-800 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-700"
+            >
+              Open Inventory
             </button>
           </div>
           <div className="mt-6 rounded-3xl border border-slate-800 bg-slate-950 p-6">

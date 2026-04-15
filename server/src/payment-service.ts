@@ -68,10 +68,11 @@ export async function createCheckoutSession(options: {
   accountId: string
   usdAmount: number
   returnUrl: string
-}): Promise<string> {
+}): Promise<{ url: string; sessionId: string }> {
   const vtAmount = usdToVt(options.usdAmount)
-  const successUrl = new URL(options.returnUrl)
-  successUrl.searchParams.set('session_id', '{CHECKOUT_SESSION_ID}')
+  const successUrl = options.returnUrl.includes('?')
+    ? `${options.returnUrl}&session_id={CHECKOUT_SESSION_ID}`
+    : `${options.returnUrl}?session_id={CHECKOUT_SESSION_ID}`
 
   const session = await stripe.checkout.sessions.create({
     payment_method_types: ['card'],
@@ -95,11 +96,14 @@ export async function createCheckoutSession(options: {
       vtAmount: vtAmount.toString(),
       usdAmount: options.usdAmount.toFixed(2),
     },
-    success_url: successUrl.toString(),
+    success_url: successUrl,
     cancel_url: options.returnUrl,
   })
 
-  return session.url || ''
+  return {
+    url: session.url || '',
+    sessionId: session.id,
+  }
 }
 
 export async function createCryptoCheckout(options: {

@@ -33,12 +33,12 @@ router.post('/payments/stripe/checkout', async (req, res) => {
         if (typeof usdAmount !== 'number' || usdAmount <= 0) {
             return res.status(400).json({ error: 'Invalid USD amount' });
         }
-        const url = await paymentService.createCheckoutSession({
+        const checkout = await paymentService.createCheckoutSession({
             accountId,
             usdAmount,
             returnUrl: returnUrl || 'http://localhost:3000/shop',
         });
-        res.json({ url, vtAmount: paymentService.usdToVt(usdAmount) });
+        res.json({ url: checkout.url, sessionId: checkout.sessionId, vtAmount: paymentService.usdToVt(usdAmount) });
     }
     catch (error) {
         res.status(500).json({ error: error.message });

@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext'
 import { useWallet } from '../context/WalletContext'
 
 export default function AddVT() {
+  const stripeSessionStorageKey = 'pendingStripeCheckoutSessionId'
   const navigate = useNavigate()
   const location = useLocation()
   const { loginWithWallet, token } = useAuth()
@@ -18,7 +19,11 @@ export default function AddVT() {
   const usdAmount = useMemo(() => Number((vtAmount / 100).toFixed(2)), [vtAmount])
 
   useEffect(() => {
-    const sessionId = searchParams.get('session_id')
+    const querySessionId = searchParams.get('session_id')
+    const storedSessionId = window.sessionStorage.getItem(stripeSessionStorageKey)
+    const sessionId =
+      querySessionId && querySessionId !== '{CHECKOUT_SESSION_ID}' ? querySessionId : storedSessionId
+
     if (!sessionId) return
 
     const verifyCheckout = async () => {
@@ -47,6 +52,7 @@ export default function AddVT() {
         }
 
         setMessage(`Card purchase verified. New VT balance: ${response.data.balance}.`)
+        window.sessionStorage.removeItem(stripeSessionStorageKey)
         navigate(location.pathname, { replace: true })
       } catch (error: any) {
         console.error('Stripe verification failed:', error)
@@ -92,6 +98,9 @@ export default function AddVT() {
       })
 
       if (response.data.url) {
+        if (response.data.sessionId) {
+          window.sessionStorage.setItem(stripeSessionStorageKey, response.data.sessionId)
+        }
         window.location.href = response.data.url
         return
       }

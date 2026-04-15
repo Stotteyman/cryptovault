@@ -60,9 +60,9 @@ const marketplaceItems = [
 ]
 
 const shopItems = [
-  { id: 101, name: 'Starter Gear Pack', price: 25, category: 'Gear Packs', description: 'A set of reliable equipment for new Vault Crawlers.' },
-  { id: 102, name: 'Cosmetic Outfit', price: 15, category: 'Cosmetics', description: 'A unique cosmetic set to stand out in the arena.' },
-  { id: 103, name: 'Repair Bundle', price: 10, category: 'Utilities', description: 'Instant gear repair credits for your next run.' },
+  { id: 101, name: 'Starter Gear Pack', price: 25, category: 'Gear Packs', rarity: 'uncommon', description: 'A set of reliable equipment for new Vault Crawlers.' },
+  { id: 102, name: 'Cosmetic Outfit', price: 15, category: 'Cosmetics', rarity: 'rare', description: 'A unique cosmetic set to stand out in the arena.' },
+  { id: 103, name: 'Repair Bundle', price: 10, category: 'Utilities', rarity: 'common', description: 'Instant gear repair credits for your next run.' },
 ]
 
 const arenaRankings = [
@@ -338,13 +338,103 @@ app.get('/api/shop/items', (req: Request, res: Response) => {
   res.json({ items: shopItems })
 })
 
-app.post('/api/shop/purchase', (req: Request, res: Response) => {
-  const { itemId } = req.body
-  const item = shopItems.find((entry) => entry.id === itemId)
-  if (!item) {
-    return res.status(404).json({ error: 'Item not found' })
+app.post('/api/shop/purchase', async (req: Request, res: Response) => {
+  try {
+    const { itemId, walletAddress } = req.body
+
+    if (!walletAddress) {
+      return res.status(400).json({ error: 'walletAddress is required' })
+    }
+
+    const item = shopItems.find((entry) => entry.id === itemId)
+    if (!item) {
+      return res.status(404).json({ error: 'Item not found' })
+    }
+
+    const account = await supabase.getOrCreateAccount(walletAddress)
+
+    if (account.cvt_balance < item.price) {
+      return res.status(400).json({
+        error: 'Insufficient vault tokens',
+        required: item.price,
+        available: account.cvt_balance,
+      })
+    }
+
+    await supabase.incrementAccountBalance(account.id, -item.price)
+    await supabase.addInventoryItem({
+      accountId: account.id,
+      itemId: item.id,
+      name: item.name,
+      category: item.category,
+      description: item.description,
+      rarity: item.rarity,
+    })
+
+    const updatedAccount = await supabase.getAccount(account.id)
+
+    res.json({
+      message: `Purchased ${item.name} for ${item.price} VT`,
+      purchasedItem: item,
+      cvtBalance: updatedAccount.cvt_balance,
+    })
+  } catch (error: any) {
+    res.status(500).json({ error: error.message })
   }
-  res.json({ message: `Purchased ${item.name} for ${item.price} CVT` })
+})
+
+app.get('/api/inventory', async (req: Request, res: Response) => {
+  try {
+    const { walletAddress } = req.query
+
+    if (!walletAddress) {
+      return res.status(400).json({ error: 'walletAddress is required' })
+    }
+
+    const account = await supabase.getOrCreateAccount(walletAddress as string)
+    const inventory = await supabase.getInventoryByAccount(account.id)
+
+    res.json({ inventory, cvtBalance: account.cvt_balance })
+  } catch (error: any) {
+    res.status(500).json({ error: error.message })
+  }
+})
+
+app.post('/api/inventory/equip', async (req: Request, res: Response) => {
+  try {
+    const { walletAddress, inventoryItemId, equipped } = req.body
+
+    if (!walletAddress || !inventoryItemId || typeof equipped !== 'boolean') {
+      return res.status(400).json({ error: 'walletAddress, inventoryItemId, and equipped are required' })
+    }
+
+    const account = await supabase.getOrCreateAccount(walletAddress)
+    const item = await supabase.setInventoryEquipped(account.id, inventoryItemId, equipped)
+
+    res.json({ message: equipped ? 'Item equipped' : 'Item unequipped', item })
+  } catch (error: any) {
+    res.status(500).json({ error: error.message })
+  }
+})
+
+app.post('/api/inventory/discard', async (req: Request, res: Response) => {
+  try {
+    const { walletAddress, inventoryItemId } = req.body
+
+    if (!walletAddress || !inventoryItemId) {
+      return res.status(400).json({ error: 'walletAddress and inventoryItemId are required' })
+    }
+
+    const account = await supabase.getOrCreateAccount(walletAddress)
+    const result = await supabase.discardInventoryItem(account.id, inventoryItemId)
+
+    res.json({
+      message: result.removed ? 'Item removed from inventory' : 'Item quantity reduced by 1',
+      ...result,
+    })
+  } catch (error: any) {
+    res.status(500).json({ error: error.message })
+  }
 })
 
 app.post('/api/vault-token/purchase', (req: Request, res: Response) => {

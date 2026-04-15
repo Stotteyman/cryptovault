@@ -67,7 +67,12 @@ export const apiClient = {
 
   // ===== SHOP & ITEMS =====
   getShopItems: () => api.get('/api/shop/items'),
-  purchaseShopItem: (data: { itemId: number }) => api.post('/api/shop/purchase', data),
+  purchaseShopItem: (data: { itemId: number; walletAddress: string }) => api.post('/api/shop/purchase', data),
+  getInventory: (walletAddress: string) => api.get('/api/inventory', { params: { walletAddress } }),
+  setInventoryEquipped: (data: { walletAddress: string; inventoryItemId: string; equipped: boolean }) =>
+    api.post('/api/inventory/equip', data),
+  discardInventoryItem: (data: { walletAddress: string; inventoryItemId: string }) =>
+    api.post('/api/inventory/discard', data),
   purchaseVaultTokens: (data: { usdAmount: number }) => api.post('/api/payments/vt/purchase', data),
 
   // ===== MARKETPLACE =====
